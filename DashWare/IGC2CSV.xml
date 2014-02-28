@@ -1,0 +1,503 @@
+<DataProfile version="2" readOnly="False" startFinishDistanceThreshold="40" showDistanceThreshold="True" ignoreFirstLap="True" ignoreLastLap="True" lapTimeHoldSecs="5" isChaseCamData="False" isAimData="False" isDriftBoxData="False" sortByTime="False" autoSync="False" autoSyncOffset="0">
+  <HeaderLines>
+    <HeaderLineIndex>0</HeaderLineIndex>
+  </HeaderLines>
+  <DataStartLineIndex>1</DataStartLineIndex>
+  <DataValueSeparators>,</DataValueSeparators>
+  <UseEuroDecimalFormat>False</UseEuroDecimalFormat>
+  <FileLineMatchers>
+    <FileLineMatcher dataLineIndex="0" matchText="Time,Latitude (Degrees),Longitude (Degrees),Altitude GPS,Distance Delta,Distance Total,Groundspeed,Groundspeed Peak,True Airspeed,True Airspeed Peak,Altitude Delta (GPS),Altitude Delta (Pressure),Climb Speed,Climb Total" matchMode="Contains" ignoreCase="False" />
+  </FileLineMatchers>
+  <Calculators>
+    <LinearInterpolator filterValues="True" standardDevCeiling="5">
+      <InputColumns>
+        <InputColumn>Latitude (Degrees)</InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Latitude_i</OutputColumn>
+      </OutputColumns>
+    </LinearInterpolator>
+    <LinearInterpolator filterValues="True" standardDevCeiling="5">
+      <InputColumns>
+        <InputColumn>Longitude (Degrees)</InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Longitude_i</OutputColumn>
+      </OutputColumns>
+    </LinearInterpolator>
+    <LinearInterpolator filterValues="False" standardDevCeiling="5">
+      <InputColumns>
+        <InputColumn>Altitude GPS</InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Altitude Meters</OutputColumn>
+      </OutputColumns>
+    </LinearInterpolator>
+    <LinearInterpolator filterValues="False" standardDevCeiling="5">
+      <InputColumns>
+        <InputColumn>Groundspeed</InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Speed KPH</OutputColumn>
+      </OutputColumns>
+    </LinearInterpolator>
+    <LinearInterpolator filterValues="False" standardDevCeiling="5">
+      <InputColumns>
+        <InputColumn>True Airspeed</InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Air Speed KPH</OutputColumn>
+      </OutputColumns>
+    </LinearInterpolator>
+    <DegreesToCartesianConverter inputUnit="Degrees" outputUnit="Feet" algorithm="SphericalMercator">
+      <InputColumns>
+        <InputColumn>Longitude_i</InputColumn>
+        <InputColumn>Latitude_i</InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>GPS_X</OutputColumn>
+        <OutputColumn>GPS_Y</OutputColumn>
+      </OutputColumns>
+    </DegreesToCartesianConverter>
+    <DistanceTravelledCalculator inputUnit="Degrees" outputUnit="Feet">
+      <InputColumns>
+        <InputColumn>Longitude_i</InputColumn>
+        <InputColumn>Latitude_i</InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Distance Feet</OutputColumn>
+      </OutputColumns>
+    </DistanceTravelledCalculator>
+    <DistanceConverter inputUnit="Meters" outputUnit="Kilometers">
+      <InputColumns>
+        <InputColumn>Altitude Meters</InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Altitude Kilometers</OutputColumn>
+      </OutputColumns>
+    </DistanceConverter>
+    <DistanceConverter inputUnit="Meters" outputUnit="Feet">
+      <InputColumns>
+        <InputColumn>Altitude Meters</InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Altitude Feet</OutputColumn>
+      </OutputColumns>
+    </DistanceConverter>
+    <SpeedConverter inputUnit="KPH" outputUnit="MPH">
+      <InputColumns>
+        <InputColumn>Speed KPH</InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Speed MPH</OutputColumn>
+      </OutputColumns>
+    </SpeedConverter>
+    <SpeedConverter inputUnit="KPH" outputUnit="Knots">
+      <InputColumns>
+        <InputColumn>Speed KPH</InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Speed Knots</OutputColumn>
+      </OutputColumns>
+    </SpeedConverter>
+    <HeadingCalculator>
+      <InputColumns>
+        <InputColumn>GPS_X</InputColumn>
+        <InputColumn>GPS_Y</InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Raw Heading</OutputColumn>
+      </OutputColumns>
+    </HeadingCalculator>
+    <AveragingCalculator parameter="0.25" mode="Angle" direction="Backwards and Forwards">
+      <InputColumns>
+        <InputColumn>Raw Heading</InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Heading</OutputColumn>
+      </OutputColumns>
+    </AveragingCalculator>
+    <GPSAccelerationCalculator inputUnit="MPH">
+      <InputColumns>
+        <InputColumn>Speed MPH</InputColumn>
+        <InputColumn>Heading</InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Raw GPS AccelGs</OutputColumn>
+        <OutputColumn>Raw GPS LatGs</OutputColumn>
+      </OutputColumns>
+    </GPSAccelerationCalculator>
+    <LinearInterpolator filterValues="False" standardDevCeiling="5">
+      <InputColumns>
+        <InputColumn>Raw GPS AccelGs</InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Interp GPS AccelGs</OutputColumn>
+      </OutputColumns>
+    </LinearInterpolator>
+    <LinearInterpolator filterValues="False" standardDevCeiling="5">
+      <InputColumns>
+        <InputColumn>Raw GPS LatGs</InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Interp GPS LatGs</OutputColumn>
+      </OutputColumns>
+    </LinearInterpolator>
+    <AveragingCalculator parameter="0.15" mode="Simple" direction="Backwards and Forwards">
+      <InputColumns>
+        <InputColumn>Interp GPS AccelGs</InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>GPS AccelGs</OutputColumn>
+      </OutputColumns>
+    </AveragingCalculator>
+    <AveragingCalculator parameter="0.15" mode="Simple" direction="Backwards and Forwards">
+      <InputColumns>
+        <InputColumn>Interp GPS LatGs</InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>GPS LatGs</OutputColumn>
+      </OutputColumns>
+    </AveragingCalculator>
+    <DistanceConverter inputUnit="Feet" outputUnit="Meters">
+      <InputColumns>
+        <InputColumn>Distance Feet</InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Distance Meters</OutputColumn>
+      </OutputColumns>
+    </DistanceConverter>
+    <DistanceConverter inputUnit="Feet" outputUnit="Miles">
+      <InputColumns>
+        <InputColumn>Distance Feet</InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Distance Miles</OutputColumn>
+      </OutputColumns>
+    </DistanceConverter>
+    <DistanceConverter inputUnit="Feet" outputUnit="Kilometers">
+      <InputColumns>
+        <InputColumn>Distance Feet</InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Distance Kilometers</OutputColumn>
+      </OutputColumns>
+    </DistanceConverter>
+    <DeltaValueCalculator>
+      <InputColumns>
+        <InputColumn>Time</InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Delta Time</OutputColumn>
+      </OutputColumns>
+    </DeltaValueCalculator>
+    <DeltaValueCalculator>
+      <InputColumns>
+        <InputColumn>Altitude Meters</InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Delta Altitude</OutputColumn>
+      </OutputColumns>
+    </DeltaValueCalculator>
+    <DeltaValueCalculator>
+      <InputColumns>
+        <InputColumn>Distance Meters</InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Delta Distance</OutputColumn>
+      </OutputColumns>
+    </DeltaValueCalculator>
+    <MathCalculator mathOperation="Multiply" parameter="-1" useConstantParameter="True">
+      <InputColumns>
+        <InputColumn>Delta Altitude</InputColumn>
+        <InputColumn>
+        </InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Positive Delta Altitude</OutputColumn>
+      </OutputColumns>
+    </MathCalculator>
+    <MathCalculator mathOperation="Divide" parameter="0" useConstantParameter="False">
+      <InputColumns>
+        <InputColumn>Delta Distance</InputColumn>
+        <InputColumn>Positive Delta Altitude</InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Delta Glide Ratio</OutputColumn>
+      </OutputColumns>
+    </MathCalculator>
+    <MathCalculator mathOperation="Divide" parameter="0" useConstantParameter="False">
+      <InputColumns>
+        <InputColumn>Delta Altitude</InputColumn>
+        <InputColumn>Delta Time</InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Raw Vertical Speed</OutputColumn>
+      </OutputColumns>
+    </MathCalculator>
+    <AveragingCalculator parameter="2" mode="Simple" direction="Backwards and Forwards">
+      <InputColumns>
+        <InputColumn>Raw Vertical Speed</InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Vertical Speed m/s</OutputColumn>
+      </OutputColumns>
+    </AveragingCalculator>
+    <SpeedConverter inputUnit="m/s" outputUnit="MPH">
+      <InputColumns>
+        <InputColumn>Vertical Speed m/s</InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Vertical Speed MPH</OutputColumn>
+      </OutputColumns>
+    </SpeedConverter>
+    <SpeedConverter inputUnit="m/s" outputUnit="KPH">
+      <InputColumns>
+        <InputColumn>Vertical Speed m/s</InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Vertical Speed KPH</OutputColumn>
+      </OutputColumns>
+    </SpeedConverter>
+    <SpeedConverter inputUnit="m/s" outputUnit="Knots">
+      <InputColumns>
+        <InputColumn>Vertical Speed m/s</InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Vertical Speed Knots</OutputColumn>
+      </OutputColumns>
+    </SpeedConverter>
+    <SpeedConverter inputUnit="m/s" outputUnit="FPM">
+      <InputColumns>
+        <InputColumn>Vertical Speed m/s</InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Vertical Speed FPM</OutputColumn>
+      </OutputColumns>
+    </SpeedConverter>
+    <MathCalculator mathOperation="Multiply" parameter="-1" useConstantParameter="True">
+      <InputColumns>
+        <InputColumn>Vertical Speed MPH</InputColumn>
+        <InputColumn>
+        </InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Falling Speed MPH</OutputColumn>
+      </OutputColumns>
+    </MathCalculator>
+    <MathCalculator mathOperation="Multiply" parameter="-1" useConstantParameter="True">
+      <InputColumns>
+        <InputColumn>Vertical Speed KPH</InputColumn>
+        <InputColumn>
+        </InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Falling Speed KPH</OutputColumn>
+      </OutputColumns>
+    </MathCalculator>
+    <MathCalculator mathOperation="Multiply" parameter="-1" useConstantParameter="True">
+      <InputColumns>
+        <InputColumn>Vertical Speed m/s</InputColumn>
+        <InputColumn>
+        </InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Falling Speed m/s</OutputColumn>
+      </OutputColumns>
+    </MathCalculator>
+    <MathCalculator mathOperation="Multiply" parameter="-1" useConstantParameter="True">
+      <InputColumns>
+        <InputColumn>Vertical Speed Knots</InputColumn>
+        <InputColumn>
+        </InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Falling Speed Knots</OutputColumn>
+      </OutputColumns>
+    </MathCalculator>
+    <MathCalculator mathOperation="Multiply" parameter="-1" useConstantParameter="True">
+      <InputColumns>
+        <InputColumn>Vertical Speed FPM</InputColumn>
+        <InputColumn>
+        </InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Falling Speed FPM</OutputColumn>
+      </OutputColumns>
+    </MathCalculator>
+    <LapSummaryCalculator>
+      <InputColumns>
+        <InputColumn>Speed MPH</InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Min Speed MPH</OutputColumn>
+        <OutputColumn>Max Speed MPH</OutputColumn>
+        <OutputColumn>Average Speed MPH</OutputColumn>
+      </OutputColumns>
+    </LapSummaryCalculator>
+    <LapSummaryCalculator>
+      <InputColumns>
+        <InputColumn>Speed KPH</InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Min Speed KPH</OutputColumn>
+        <OutputColumn>Max Speed KPH</OutputColumn>
+        <OutputColumn>Average Speed KPH</OutputColumn>
+      </OutputColumns>
+    </LapSummaryCalculator>
+    <MathCalculator mathOperation="Divide" parameter="0" useConstantParameter="False">
+      <InputColumns>
+        <InputColumn>Delta Altitude</InputColumn>
+        <InputColumn>Delta Distance</InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Grade</OutputColumn>
+      </OutputColumns>
+    </MathCalculator>
+    <MathCalculator mathOperation="Multiply" parameter="100" useConstantParameter="True">
+      <InputColumns>
+        <InputColumn>Grade</InputColumn>
+        <InputColumn>
+        </InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Grade Percentage</OutputColumn>
+      </OutputColumns>
+    </MathCalculator>
+    <AveragingCalculator parameter="5" mode="Simple" direction="Backwards and Forwards">
+      <InputColumns>
+        <InputColumn>Grade Percentage</InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Grade Averaged</OutputColumn>
+      </OutputColumns>
+    </AveragingCalculator>
+    <AngleConverter inputUnit="Grade Percentage" outputUnit="Degrees">
+      <InputColumns>
+        <InputColumn>Grade Averaged</InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Grade Degrees</OutputColumn>
+      </OutputColumns>
+    </AngleConverter>
+    <AscentDescentCalculator>
+      <InputColumns>
+        <InputColumn>Altitude Meters</InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Total Ascent Meters</OutputColumn>
+        <OutputColumn>Total Descent Meters</OutputColumn>
+        <OutputColumn>Altitude Min Meters</OutputColumn>
+        <OutputColumn>Altitude Max Meters</OutputColumn>
+      </OutputColumns>
+    </AscentDescentCalculator>
+    <DistanceConverter inputUnit="Meters" outputUnit="Feet">
+      <InputColumns>
+        <InputColumn>Total Ascent Meters</InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Total Ascent Feet</OutputColumn>
+      </OutputColumns>
+    </DistanceConverter>
+    <DistanceConverter inputUnit="Meters" outputUnit="Feet">
+      <InputColumns>
+        <InputColumn>Total Descent Meters</InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Total Descent Feet</OutputColumn>
+      </OutputColumns>
+    </DistanceConverter>
+    <DistanceConverter inputUnit="Meters" outputUnit="Feet">
+      <InputColumns>
+        <InputColumn>Altitude Min Meters</InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Altitude Min Feet</OutputColumn>
+      </OutputColumns>
+    </DistanceConverter>
+    <DistanceConverter inputUnit="Meters" outputUnit="Feet">
+      <InputColumns>
+        <InputColumn>Altitude Max Meters</InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Altitude Max Feet</OutputColumn>
+      </OutputColumns>
+    </DistanceConverter>
+    <SpeedConverter inputUnit="KPH" outputUnit="MPH">
+      <InputColumns>
+        <InputColumn>Air Speed KPH</InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Air Speed MPH</OutputColumn>
+      </OutputColumns>
+    </SpeedConverter>
+    <SpeedConverter inputUnit="KPH" outputUnit="m/s">
+      <InputColumns>
+        <InputColumn>Air Speed KPH</InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Air Speed m/s</OutputColumn>
+      </OutputColumns>
+    </SpeedConverter>
+    <SpeedConverter inputUnit="KPH" outputUnit="Knots">
+      <InputColumns>
+        <InputColumn>Air Speed KPH</InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Air Speed Knots</OutputColumn>
+      </OutputColumns>
+    </SpeedConverter>
+  </Calculators>
+  <ColumnMappings>
+    <ColumnMapping inputColumnText="Time" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="&lt;Required&gt;" dataType="Data Running Time, Seconds" />
+    <ColumnMapping inputColumnText="Latitude_i" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Positional" dataType="Latitude / Y Position (Degrees)" />
+    <ColumnMapping inputColumnText="Longitude_i" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Positional" dataType="Longitude / X Position (Degrees)" />
+    <ColumnMapping inputColumnText="GPS_X" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Positional" dataType="Longitude / X Position (Feet)" />
+    <ColumnMapping inputColumnText="GPS_Y" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Positional" dataType="Latitude / Y Position (Feet)" />
+    <ColumnMapping inputColumnText="Altitude Feet" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Positional" dataType="Altitude / Z Position (Feet)" />
+    <ColumnMapping inputColumnText="Altitude Meters" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Positional" dataType="Altitude / Z Position (Meters)" />
+    <ColumnMapping inputColumnText="Distance Feet" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Positional" dataType="Distance (Feet)" />
+    <ColumnMapping inputColumnText="Distance Meters" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Positional" dataType="Distance (Meters)" />
+    <ColumnMapping inputColumnText="Distance Miles" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Positional" dataType="Distance (Miles)" />
+    <ColumnMapping inputColumnText="Distance Kilometers" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Positional" dataType="Distance (Kilometers)" />
+    <ColumnMapping inputColumnText="Speed MPH" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Velocity" dataType="Speed (MPH)" />
+    <ColumnMapping inputColumnText="Speed KPH" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Velocity" dataType="Speed (KPH)" />
+    <ColumnMapping inputColumnText="Speed Knots" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Velocity" dataType="Speed (Knots)" />
+    <ColumnMapping inputColumnText="Heading" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Positional" dataType="Heading" />
+    <ColumnMapping inputColumnText="GPS AccelGs" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="G-Forces" dataType="Acceleration Gs" />
+    <ColumnMapping inputColumnText="GPS LatGs" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="G-Forces" dataType="Lateral Gs" />
+    <ColumnMapping inputColumnText="Vertical Speed m/s" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Velocity" dataType="Vertical Speed (m/s)" />
+    <ColumnMapping inputColumnText="Vertical Speed MPH" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Velocity" dataType="Vertical Speed (MPH)" />
+    <ColumnMapping inputColumnText="Vertical Speed KPH" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Velocity" dataType="Vertical Speed (KPH)" />
+    <ColumnMapping inputColumnText="Vertical Speed Knots" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Velocity" dataType="Vertical Speed (Knots)" />
+    <ColumnMapping inputColumnText="Vertical Speed FPM" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Velocity" dataType="Vertical Speed (FPM)" />
+    <ColumnMapping inputColumnText="Falling Speed m/s" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Velocity" dataType="Falling Speed (m/s)" />
+    <ColumnMapping inputColumnText="Falling Speed MPH" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Velocity" dataType="Falling Speed (MPH)" />
+    <ColumnMapping inputColumnText="Falling Speed KPH" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Velocity" dataType="Falling Speed (KPH)" />
+    <ColumnMapping inputColumnText="Falling Speed Knots" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Velocity" dataType="Falling Speed (Knots)" />
+    <ColumnMapping inputColumnText="Falling Speed FPM" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Velocity" dataType="Falling Speed (FPM)" />
+    <ColumnMapping inputColumnText="Air Speed m/s" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Velocity" dataType="Air Speed (m/s)" />
+    <ColumnMapping inputColumnText="Air Speed MPH" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Velocity" dataType="Air Speed (MPH)" />
+    <ColumnMapping inputColumnText="Air Speed KPH" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Velocity" dataType="Air Speed (KPH)" />
+    <ColumnMapping inputColumnText="Air Speed Knots" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Velocity" dataType="Air Speed (Knots)" />
+    <ColumnMapping inputColumnText="Min Speed MPH" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Velocity" dataType="Speed Lap Min (MPH)" />
+    <ColumnMapping inputColumnText="Max Speed MPH" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Velocity" dataType="Speed Lap Max (MPH)" />
+    <ColumnMapping inputColumnText="Average Speed MPH" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Velocity" dataType="Speed Lap Avg (MPH)" />
+    <ColumnMapping inputColumnText="Min Speed KPH" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Velocity" dataType="Speed Lap Min (KPH)" />
+    <ColumnMapping inputColumnText="Max Speed KPH" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Velocity" dataType="Speed Lap Max (KPH)" />
+    <ColumnMapping inputColumnText="Average Speed KPH" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Velocity" dataType="Speed Lap Avg (KPH)" />
+    <ColumnMapping inputColumnText="Grade Averaged" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Positional" dataType="Grade" />
+    <ColumnMapping inputColumnText="Grade Degrees" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Positional" dataType="Grade Angle" />
+    <ColumnMapping inputColumnText="Total Ascent Meters" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Positional" dataType="Total Ascent (Meters)" />
+    <ColumnMapping inputColumnText="Total Descent Meters" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Positional" dataType="Total Descent (Meters)" />
+    <ColumnMapping inputColumnText="Altitude Min Meters" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Positional" dataType="Altitude Min (Meters)" />
+    <ColumnMapping inputColumnText="Altitude Max Meters" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Positional" dataType="Altitude Max (Meters)" />
+    <ColumnMapping inputColumnText="Total Ascent Feet" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Positional" dataType="Total Ascent (Feet)" />
+    <ColumnMapping inputColumnText="Total Descent Feet" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Positional" dataType="Total Descent (Feet)" />
+    <ColumnMapping inputColumnText="Altitude Min Feet" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Positional" dataType="Altitude Min (Feet)" />
+    <ColumnMapping inputColumnText="Altitude Max Feet" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Positional" dataType="Altitude Max (Feet)" />
+    <ColumnMapping inputColumnText="Time" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Date Time" dataType="Date" />
+    <ColumnMapping inputColumnText="Time" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Date Time" dataType="Time of Day" />
+    <ColumnMapping inputColumnText="Delta Glide Ratio" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Positional" dataType="Glide Ratio" />
+  </ColumnMappings>
+</DataProfile>
