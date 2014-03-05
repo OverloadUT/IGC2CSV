@@ -364,7 +364,7 @@
         <OutputColumn>Grade Percentage</OutputColumn>
       </OutputColumns>
     </MathCalculator>
-    <AveragingCalculator parameter="5" mode="Simple" direction="Backwards and Forwards">
+    <AveragingCalculator parameter="2" mode="Simple" direction="Backwards and Forwards">
       <InputColumns>
         <InputColumn>Grade Percentage</InputColumn>
       </InputColumns>
@@ -447,6 +447,60 @@
         <OutputColumn>Air Speed Knots</OutputColumn>
       </OutputColumns>
     </SpeedConverter>
+    <MathCalculator mathOperation="Subtract" parameter="0" useConstantParameter="False">
+      <InputColumns>
+        <InputColumn>Altitude Meters</InputColumn>
+        <InputColumn>Altitude Max Meters</InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Altitude Above Max Meters</OutputColumn>
+      </OutputColumns>
+    </MathCalculator>
+    <MathCalculator mathOperation="Subtract" parameter="0" useConstantParameter="False">
+      <InputColumns>
+        <InputColumn>Altitude Meters</InputColumn>
+        <InputColumn>Altitude Min Meters</InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Altitude Above Min Meters</OutputColumn>
+      </OutputColumns>
+    </MathCalculator>
+    <MathCalculator mathOperation="Subtract" parameter="0" useConstantParameter="False">
+      <InputColumns>
+        <InputColumn>Altitude Feet</InputColumn>
+        <InputColumn>Altitude Max Feet</InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Altitude Above Max Feet</OutputColumn>
+      </OutputColumns>
+    </MathCalculator>
+    <MathCalculator mathOperation="Subtract" parameter="0" useConstantParameter="False">
+      <InputColumns>
+        <InputColumn>Altitude Feet</InputColumn>
+        <InputColumn>Altitude Min Feet</InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Altitude Above Min Feet</OutputColumn>
+      </OutputColumns>
+    </MathCalculator>
+    <MathCalculator mathOperation="Subtract" parameter="0" useConstantParameter="False">
+      <InputColumns>
+        <InputColumn>Air Speed KPH</InputColumn>
+        <InputColumn>Speed KPH</InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Headwind Speed KPH</OutputColumn>
+      </OutputColumns>
+    </MathCalculator>
+    <MathCalculator mathOperation="Subtract" parameter="0" useConstantParameter="False">
+      <InputColumns>
+        <InputColumn>Air Speed MPH</InputColumn>
+        <InputColumn>Speed MPH</InputColumn>
+      </InputColumns>
+      <OutputColumns>
+        <OutputColumn>Headwind Speed MPH</OutputColumn>
+      </OutputColumns>
+    </MathCalculator>
   </Calculators>
   <ColumnMappings>
     <ColumnMapping inputColumnText="Time" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="&lt;Required&gt;" dataType="Data Running Time, Seconds" />
