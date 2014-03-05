@@ -27,18 +27,17 @@ def parse_igc(file):
 
 def crunch_flight(flight):
   #TODO: All of the TAS stuff needs to be conditional based on if we actually have TAS data
-  flight['distance_total'] = 0
-  flight['climb_total'] = 0
-  flight['alt_peak'] = 0
-  flight['groundspeed_peak'] = 0
-  flight['time_start'] = 0
-  flight['tas_peak'] = 0
+  
+  #TODO: Add Takeoff Distance
+  #TODO: Add Altitude Above Landing
+  #TODO: Add Date/Time
   
   for index, record in enumerate(flight['fixrecords']):
     record['latdegrees'] = lat_to_degrees(record['latitude'])
     record['londegrees'] = lon_to_degrees(record['longitude'])
     #TODO: This timeseconds calculation is terrible - completely breaks if we pass midnight
     record['timeseconds'] = int(record['timestamp'][0:2])*3600 + int(record['timestamp'][2:4])*60 + int(record['timestamp'][4:6])
+    
     if index > 0:
       prevrecord = flight['fixrecords'][index-1]
       record['time_delta'] = int(record['timeseconds']) - int(prevrecord['timeseconds'])
@@ -55,10 +54,19 @@ def crunch_flight(flight):
       flight['climb_total'] += max(0, record['alt_gps_delta'])
       record['climb_total'] = flight['climb_total']
       flight['alt_peak'] = max(record['alt-GPS'], flight['alt_peak'])
+      flight['alt_floor'] = min(record['alt-GPS'], flight['alt_floor'])
       flight['tas_peak'] = max(record['tas'], flight['tas_peak'])
       record['tas_peak'] = flight['tas_peak']
     else:
       flight['time_start'] = record['timeseconds']
+      flight['altitude_start'] = record['alt-GPS']
+      flight['distance_total'] = 0
+      flight['climb_total'] = 0
+      flight['alt_peak'] = record['alt-GPS']
+      flight['alt_floor'] = record['alt-GPS']
+      flight['groundspeed_peak'] = 0
+      flight['tas_peak'] = record['tas']
+  
       record['running_time'] = 0
       record['time_delta'] = 0
       record['distance_delta'] = 0
@@ -70,7 +78,7 @@ def crunch_flight(flight):
       record['climb_speed'] = 0
       record['climb_total'] = 0
       record['tas_peak'] = 0
-      
+  
   return flight
 
 def logline_A(line, flight):
@@ -158,9 +166,9 @@ def get_output_filename(inputfilename):
   return outputfilename
 
 output = open(get_output_filename(fileparam), 'w')
-output.write('Time,Latitude (Degrees),Longitude (Degrees),Altitude GPS,Distance Delta,Distance Total,Groundspeed,Groundspeed Peak,True Airspeed,True Airspeed Peak,Altitude Delta (GPS),Altitude Delta (Pressure),Climb Speed,Climb Total\n')
+output.write('Time,Latitude (Degrees),Longitude (Degrees),Altitude GPS,Distance Delta,Distance Total,Groundspeed,Groundspeed Peak,True Airspeed,True Airspeed Peak,Altitude Delta (GPS),Altitude Delta (Pressure),Climb Speed,Climb Total,Max Altitude (flight),Min Altitude (flight)\n')
 for record in flight['fixrecords']:
-  output.write("{},{},{},{},{},{},{},{},{},{},{},{},{},{}\n".format(
+  output.write("{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}\n".format(
     record['running_time'],
     record['latdegrees'],
     record['londegrees'],
@@ -175,7 +183,10 @@ for record in flight['fixrecords']:
     record['alt_pressure_delta'],
     record['climb_speed'],
     record['climb_total'],
+    flight['alt_peak'],
+    flight['alt_floor'],
   ))
 
+#HACK to output everything except for the table of fixrecords
 flight['fixrecords'] = []
 print(flight)
