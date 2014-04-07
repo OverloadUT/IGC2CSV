@@ -28,7 +28,6 @@ def parse_igc(file):
 def crunch_flight(flight):
   #TODO: All of the TAS stuff needs to be conditional based on if we actually have TAS data
   
-  #TODO: Add Takeoff Distance
   #TODO: Add Altitude Above Landing
   #TODO: Add Date/Time
   
@@ -45,6 +44,7 @@ def crunch_flight(flight):
       record['distance_delta'] = haversine(record['londegrees'], record['latdegrees'], prevrecord['londegrees'], prevrecord['latdegrees'])
       flight['distance_total'] += record['distance_delta']
       record['distance_total'] = flight['distance_total']
+      record['distance_from_start'] = straight_line_distance(record['londegrees'], record['latdegrees'], record['alt-GPS'], flight['fixrecords'][0]['londegrees'], flight['fixrecords'][0]['latdegrees'], flight['fixrecords'][0]['alt-GPS'])
       record['groundspeed'] = record['distance_delta'] / record['time_delta'] * 3600
       flight['groundspeed_peak'] = max(record['groundspeed'], flight['groundspeed_peak'])
       record['groundspeed_peak'] = flight['groundspeed_peak']
@@ -78,6 +78,7 @@ def crunch_flight(flight):
       record['climb_speed'] = 0
       record['climb_total'] = 0
       record['tas_peak'] = 0
+      record['distance_from_start'] = 0
   
   return flight
 
@@ -100,6 +101,7 @@ def logline_B(line, flight):
     'alt-GPS'   : int(line[30:35]),
     'tas'       : int(line[35:38]), #TODO: THIS IS NOT STANDARD! FIXME TO BE BASED ON THE I RECORD IN THE IGC
   })
+
   return
 
 def logline_NotImplemented(line, flight):
@@ -142,22 +144,27 @@ def lon_to_degrees(lon):
 
 # haversine calculates the distance between two pairs of latitude/longitude
 def haversine(lon1, lat1, lon2, lat2):
-    """
-    Calculate the great circle distance between two points 
-    on the earth (specified in decimal degrees)
-    """
-    # convert decimal degrees to radians 
-    lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
-    # haversine formula 
-    dlon = lon2 - lon1 
-    dlat = lat2 - lat1 
-    a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
-    c = 2 * asin(sqrt(a)) 
-    km = 6367 * c
-    return km
+  """
+  Calculate the great circle distance between two points 
+  on the earth (specified in decimal degrees)
+  """
+  # convert decimal degrees to radians 
+  lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
+  # haversine formula 
+  dlon = lon2 - lon1 
+  dlat = lat2 - lat1 
+  a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
+  c = 2 * asin(sqrt(a)) 
+  km = 6367 * c
+  return km
 
-flight = parse_igc(igcfile)
-flight = crunch_flight(flight)
+# Calculates the distance between two sets of latitude, longitude, and altitude, as a straight line
+def straight_line_distance(lon1, lat1, alt1, lon2, lat2, alt2):
+  a = haversine(lon1, lat1, lon2, lat2)
+  b =  (alt1 - alt2) / 1000. #altitude is in meters, but we're working in km here
+  c = sqrt(a**2. + b**2.)
+  return c
+
 
 def get_output_filename(inputfilename):
   head, tail = os.path.split(inputfilename)
@@ -165,10 +172,14 @@ def get_output_filename(inputfilename):
   outputfilename = filename + '.csv'
   return outputfilename
 
+
+flight = parse_igc(igcfile)
+flight = crunch_flight(flight)
+
 output = open(get_output_filename(fileparam), 'w')
-output.write('Time,Latitude (Degrees),Longitude (Degrees),Altitude GPS,Distance Delta,Distance Total,Groundspeed,Groundspeed Peak,True Airspeed,True Airspeed Peak,Altitude Delta (GPS),Altitude Delta (Pressure),Climb Speed,Climb Total,Max Altitude (flight),Min Altitude (flight)\n')
+output.write('Time,Latitude (Degrees),Longitude (Degrees),Altitude GPS,Distance Delta,Distance Total,Groundspeed,Groundspeed Peak,True Airspeed,True Airspeed Peak,Altitude Delta (GPS),Altitude Delta (Pressure),Climb Speed,Climb Total,Max Altitude (flight),Min Altitude (flight), Distance From Start (straight line)\n')
 for record in flight['fixrecords']:
-  output.write("{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}\n".format(
+  output.write("{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}\n".format(
     record['running_time'],
     record['latdegrees'],
     record['londegrees'],
@@ -185,6 +196,7 @@ for record in flight['fixrecords']:
     record['climb_total'],
     flight['alt_peak'],
     flight['alt_floor'],
+    record['distance_from_start']
   ))
 
 #HACK to output everything except for the table of fixrecords
