@@ -3,19 +3,6 @@ import os
 import datetime
 from math import radians, cos, sin, asin, sqrt
 
-print('Number of arguments:', len(sys.argv), 'arguments.')
-print('Argument List:', str(sys.argv))
-
-fileparam = sys.argv[1]
-
-if os.path.isfile(fileparam):
-  igcfile = open(fileparam, 'r')
-  print('IGC file:',igcfile.name)
-else:
-  print('Parsing direcories not yet supported')
-  exit()
-
-
 def parse_igc(file):
   flight = {'fixrecords': []}
 
@@ -29,8 +16,6 @@ def parse_igc(file):
 def crunch_flight(flight):
   #TODO: All of the TAS stuff needs to be conditional based on if we actually have TAS data
   
-  #TODO: Add Altitude Above Landing
-  
   for index, record in enumerate(flight['fixrecords']):
     #thisdatetime = datetime.datetime.strptime(record['timestamp'], '')
     record['latdegrees'] = lat_to_degrees(record['latitude'])
@@ -42,16 +27,15 @@ def crunch_flight(flight):
       prevrecord = flight['fixrecords'][index-1]
 
       # Because we only know the date of the FIRST B record, we have to do some shaky logic to determine when we cross the midnight barrier
-      # There's a theoretical edge case here where two B records are separated by more than 24 hours - this should never actually happen though
+      # There's a theoretical edge case here where two B records are separated by more than 24 hours causing the date to be incorrect
+      # But that's a problem with the IGC spec and we can't do much about it
       if(record['time'] < prevrecord['time']):
-        # We crossed the midnight barrier
+        # We crossed the midnight barrier, so increment the date
         record['date'] = prevrecord['date'] + datetime.timedelta(days=1)
       else:
         record['date'] = prevrecord['date']
 
       record['datetime'] = datetime.datetime.combine(record['date'], record['time'])
-      print(record['datetime'])
-
       record['time_delta'] = (record['datetime'] - prevrecord['datetime']).total_seconds()
       record['running_time'] = (record['datetime'] - flight['datetime_start']).total_seconds()
       record['distance_delta'] = haversine(record['londegrees'], record['latdegrees'], prevrecord['londegrees'], prevrecord['latdegrees'])
@@ -100,7 +84,7 @@ def crunch_flight(flight):
 
 def logline_A(line, flight):
   flight['manufacturer'] = line[1:]
-  print('Manufacturer:',flight['manufacturer'])
+  print "Manufacturer: {}".format(flight['manufacturer'])
   return
 
 # H Records are headers that give one-time information
@@ -109,7 +93,7 @@ def logline_H(line, flight):
   try:
     headertypes[line[1:5]](line[5:], flight)
   except KeyError:
-    print('Header (not implemented):',line[1:])
+    print "Header (not implemented): {}".format(line[1:])
   return
 
 # Flight date header. This is the date that the FIRST B record was made on
@@ -134,7 +118,7 @@ def logline_B(line, flight):
   return
 
 def logline_NotImplemented(line, flight):
-  print('Record Type ' + line[0:1] + ' Not implemented')
+  print "Record Type {} not implemented: {}".format(line[0:1], line[1:])
   return
 
   
@@ -205,34 +189,48 @@ def get_output_filename(inputfilename):
   outputfilename = filename + '.csv'
   return outputfilename
 
-flight = parse_igc(igcfile)
-flight = crunch_flight(flight)
+if __name__ == "__main__":
+  print "Number of arguments: {}".format(len(sys.argv))
+  print "Argument List: {}".format(str(sys.argv))
 
-output = open(get_output_filename(fileparam), 'w')
-output.write('Datetime (UTC),Elapsed Time,Latitude (Degrees),Longitude (Degrees),Altitude GPS,Distance Delta,Distance Total,Groundspeed,Groundspeed Peak,True Airspeed,True Airspeed Peak,Altitude Delta (GPS),Altitude Delta (Pressure),Climb Speed,Climb Total,Max Altitude (flight),Min Altitude (flight), Distance From Start (straight line)\n')
-for record in flight['fixrecords']:
-  # TODO: there is probably a cleaner way to do this
-  output.write("{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}\n".format(
-    record['datetime'],
-    record['running_time'],
-    record['latdegrees'],
-    record['londegrees'],
-    record['alt-GPS'],
-    record['distance_delta'],
-    record['distance_total'],
-    record['groundspeed'],
-    record['groundspeed_peak'],
-    record['tas'],
-    record['tas_peak'],
-    record['alt_gps_delta'],
-    record['alt_pressure_delta'],
-    record['climb_speed'],
-    record['climb_total'],
-    flight['alt_peak'],
-    flight['alt_floor'],
-    record['distance_from_start']
-  ))
+  fileparam = sys.argv[1]
+  if os.path.isfile(fileparam):
+    igcfile = open(fileparam, 'r')
+    print "IGC file: {}".format(igcfile.name)
+  else:
+    print 'Parsing direcories not yet supported'
+    exit()
 
-#HACK to output everything except for the table of fixrecords
-flight['fixrecords'] = []
-print(flight)
+  flight = parse_igc(igcfile)
+  flight = crunch_flight(flight)
+  flight['outputfilename'] = get_output_filename(igcfile.name)
+
+  output = open(flight['outputfilename'], 'w')
+
+  output.write('Datetime (UTC),Elapsed Time,Latitude (Degrees),Longitude (Degrees),Altitude GPS,Distance Delta,Distance Total,Groundspeed,Groundspeed Peak,True Airspeed,True Airspeed Peak,Altitude Delta (GPS),Altitude Delta (Pressure),Climb Speed,Climb Total,Max Altitude (flight),Min Altitude (flight), Distance From Start (straight line)\n')
+  for record in flight['fixrecords']:
+    # TODO: there is probably a cleaner way to do this
+    output.write("{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}\n".format(
+      record['datetime'],
+      record['running_time'],
+      record['latdegrees'],
+      record['londegrees'],
+      record['alt-GPS'],
+      record['distance_delta'],
+      record['distance_total'],
+      record['groundspeed'],
+      record['groundspeed_peak'],
+      record['tas'],
+      record['tas_peak'],
+      record['alt_gps_delta'],
+      record['alt_pressure_delta'],
+      record['climb_speed'],
+      record['climb_total'],
+      flight['alt_peak'],
+      flight['alt_floor'],
+      record['distance_from_start']
+    ))
+
+  #HACK to output everything except for the table of fixrecords
+  flight['fixrecords'] = []
+  print(flight)
