@@ -4,7 +4,7 @@ import datetime
 from math import radians, cos, sin, asin, sqrt
 
 def parse_igc(file):
-  flight = {'fixrecords': []}
+  flight = {'fixrecords': [], 'optional_records': []}
 
   for line in file:
     line = line.rstrip()
@@ -207,29 +207,43 @@ if __name__ == "__main__":
 
   output = open(flight['outputfilename'], 'w')
 
-  output.write('Datetime (UTC),Elapsed Time,Latitude (Degrees),Longitude (Degrees),Altitude GPS,Distance Delta,Distance Total,Groundspeed,Groundspeed Peak,True Airspeed,True Airspeed Peak,Altitude Delta (GPS),Altitude Delta (Pressure),Climb Speed,Climb Total,Max Altitude (flight),Min Altitude (flight), Distance From Start (straight line)\n')
+  outputfields = [
+    ('Datetime (UTC)', 'record', 'datetime'),
+    ('Elapsed Time', 'record', 'running_time'),
+    ('Latitude (Degrees)', 'record', 'latdegrees'),
+    ('Longitude (Degrees)', 'record', 'londegrees'),
+    ('Altitude GPS', 'record', 'alt-GPS'),
+    ('Distance Delta', 'record', 'distance_delta'),
+    ('Distance Total', 'record', 'distance_total'),
+    ('Groundspeed', 'record', 'groundspeed'),
+    ('Groundspeed Peak', 'record', 'groundspeed_peak'),
+    ('Altitude Delta (GPS)', 'record', 'alt_gps_delta'),
+    ('Altitude Delta (Pressure)', 'record', 'alt_pressure_delta'),
+    ('Climb Speed', 'record', 'climb_speed'),
+    ('Climb Total', 'record', 'climb_total'),
+    ('Max Altitude (flight)', 'flight', 'alt_peak'),
+    ('Min Altitude (flight)', 'flight', 'alt_floor'),
+    ('Distance From Start (straight line)', 'record', 'distance_from_start')
+    ]
+  # if 'tas' in flight['optional_records']:
+  #   outputfields.append(
+  #     ('True Airspeed', 'record', 'tas')
+  #     ('True Airspeed Peak', 'record', 'tas_peak')
+  #     )
+
+  header = ''
+  for field in outputfields:
+    header += field[0] + ','
+  output.write(header[:-1] + '\n')
+
   for record in flight['fixrecords']:
-    # TODO: there is probably a cleaner way to do this
-    output.write("{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}\n".format(
-      record['datetime'],
-      record['running_time'],
-      record['latdegrees'],
-      record['londegrees'],
-      record['alt-GPS'],
-      record['distance_delta'],
-      record['distance_total'],
-      record['groundspeed'],
-      record['groundspeed_peak'],
-      record['tas'],
-      record['tas_peak'],
-      record['alt_gps_delta'],
-      record['alt_pressure_delta'],
-      record['climb_speed'],
-      record['climb_total'],
-      flight['alt_peak'],
-      flight['alt_floor'],
-      record['distance_from_start']
-    ))
+    recordline = ''
+    for field in outputfields:
+      if field[1] == 'record':
+        recordline += str(record[field[2]]) + ','
+      elif field[1] == 'flight':
+        recordline += str(flight[field[2]]) + ','
+    output.write(recordline[:-1] + '\n')
 
   #HACK to output everything except for the table of fixrecords
   flight['fixrecords'] = []
