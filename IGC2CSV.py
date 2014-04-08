@@ -4,7 +4,7 @@ import datetime
 from math import radians, cos, sin, asin, sqrt
 
 def parse_igc(file):
-  flight = {'fixrecords': [], 'optional_records': []}
+  flight = {'fixrecords': [], 'optional_records': {}}
 
   for line in file:
     line = line.rstrip()
@@ -14,8 +14,6 @@ def parse_igc(file):
   return flight
 
 def crunch_flight(flight):
-  #TODO: All of the TAS stuff needs to be conditional based on if we actually have TAS data
-  
   for index, record in enumerate(flight['fixrecords']):
     #thisdatetime = datetime.datetime.strptime(record['timestamp'], '')
     record['latdegrees'] = lat_to_degrees(record['latitude'])
@@ -52,8 +50,9 @@ def crunch_flight(flight):
       record['climb_total'] = flight['climb_total']
       flight['alt_peak'] = max(record['alt-GPS'], flight['alt_peak'])
       flight['alt_floor'] = min(record['alt-GPS'], flight['alt_floor'])
-      flight['tas_peak'] = max(record['tas'], flight['tas_peak'])
-      record['tas_peak'] = flight['tas_peak']
+      if "TAS" in flight['optional_records']:
+        flight['tas_peak'] = max(record['opt_tas'], flight['tas_peak'])
+        record['tas_peak'] = flight['tas_peak']
     else:
       flight['time_start'] = record['time']
       flight['datetime_start'] = datetime.datetime.combine(flight['flightdate'], flight['time_start'])
@@ -63,7 +62,6 @@ def crunch_flight(flight):
       flight['alt_peak'] = record['alt-GPS']
       flight['alt_floor'] = record['alt-GPS']
       flight['groundspeed_peak'] = 0
-      flight['tas_peak'] = record['tas']
   
       record['date'] = flight['flightdate']
       record['datetime'] = datetime.datetime.combine(record['date'], record['time'])
@@ -77,8 +75,11 @@ def crunch_flight(flight):
       record['alt_pressure_delta'] = 0
       record['climb_speed'] = 0
       record['climb_total'] = 0
-      record['tas_peak'] = 0
       record['distance_from_start'] = 0
+
+      if "TAS" in flight['optional_records']:
+        flight['tas_peak'] = record['opt_tas']
+        record['tas_peak'] = 0
   
   return flight
 
@@ -103,6 +104,13 @@ def logline_H_FDTE(line, flight):
   flight['flightdate'] = datetime.date(int(line[4:6])+2000, int(line[2:4]), int(line[0:2]))
   print "Flight date: {}".format(flight['flightdate'])
 
+  
+def logline_I(line, flight):
+  num = int(line[1:3])
+  for i in xrange(num):
+    field = line[3+7*i:10+7*i]
+    flight['optional_records'][field[4:7]] = (int(field[0:2])-1, int(field[2:4]))
+
 
 def logline_B(line, flight):
   flight['fixrecords'].append({
@@ -112,8 +120,9 @@ def logline_B(line, flight):
     'AVflag'    : line[24:25] == "A",
     'pressure'  : int(line[25:30]),
     'alt-GPS'   : int(line[30:35]),
-    'tas'       : int(line[35:38]), #TODO: THIS IS NOT STANDARD! FIXME TO BE BASED ON THE I RECORD IN THE IGC
   })
+  for key, record in flight['optional_records'].iteritems():
+    flight['fixrecords'][-1]['opt_' +  key.lower()] = line[record[0]:record[1]]
 
   return
 
@@ -131,7 +140,7 @@ recordtypes = {
   'F' : logline_NotImplemented,
   'G' : logline_NotImplemented,
   'H' : logline_H,
-  'I' : logline_NotImplemented,
+  'I' : logline_I,
   'J' : logline_NotImplemented,
   'K' : logline_NotImplemented,
   'L' : logline_NotImplemented,
@@ -225,11 +234,9 @@ if __name__ == "__main__":
     ('Min Altitude (flight)', 'flight', 'alt_floor'),
     ('Distance From Start (straight line)', 'record', 'distance_from_start')
     ]
-  # if 'tas' in flight['optional_records']:
-  #   outputfields.append(
-  #     ('True Airspeed', 'record', 'tas')
-  #     ('True Airspeed Peak', 'record', 'tas_peak')
-  #     )
+  if 'TAS' in flight['optional_records']:
+    outputfields.append( ('True Airspeed', 'record', 'opt_tas') )
+    outputfields.append( ('True Airspeed Peak', 'record', 'tas_peak') )
 
   header = ''
   for field in outputfields:
