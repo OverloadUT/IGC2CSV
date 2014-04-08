@@ -6,7 +6,7 @@
   <DataValueSeparators>,</DataValueSeparators>
   <UseEuroDecimalFormat>False</UseEuroDecimalFormat>
   <FileLineMatchers>
-    <FileLineMatcher dataLineIndex="0" matchText="Time,Latitude (Degrees),Longitude (Degrees),Altitude GPS,Distance Delta,Distance Total,Groundspeed,Groundspeed Peak,True Airspeed,True Airspeed Peak,Altitude Delta (GPS),Altitude Delta (Pressure),Climb Speed,Climb Total" matchMode="Contains" ignoreCase="False" />
+    <FileLineMatcher dataLineIndex="0" matchText="Datetime (UTC),Elapsed Time,Latitude (Degrees),Longitude (Degrees),Altitude GPS,Distance Delta" matchMode="Contains" ignoreCase="False" />
   </FileLineMatchers>
   <Calculators>
     <LinearInterpolator filterValues="True" standardDevCeiling="5">
@@ -185,7 +185,7 @@
     </DistanceConverter>
     <DeltaValueCalculator>
       <InputColumns>
-        <InputColumn>Time</InputColumn>
+        <InputColumn>Elapsed Time</InputColumn>
       </InputColumns>
       <OutputColumns>
         <OutputColumn>Delta Time</OutputColumn>
@@ -503,7 +503,7 @@
     </MathCalculator>
   </Calculators>
   <ColumnMappings>
-    <ColumnMapping inputColumnText="Time" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="&lt;Required&gt;" dataType="Data Running Time, Seconds" />
+    <ColumnMapping inputColumnText="Elapsed Time" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="&lt;Required&gt;" dataType="Data Running Time, Seconds" />
     <ColumnMapping inputColumnText="Latitude_i" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Positional" dataType="Latitude / Y Position (Degrees)" />
     <ColumnMapping inputColumnText="Longitude_i" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Positional" dataType="Longitude / X Position (Degrees)" />
     <ColumnMapping inputColumnText="GPS_X" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Positional" dataType="Longitude / X Position (Feet)" />
@@ -550,8 +550,8 @@
     <ColumnMapping inputColumnText="Total Descent Feet" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Positional" dataType="Total Descent (Feet)" />
     <ColumnMapping inputColumnText="Altitude Min Feet" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Positional" dataType="Altitude Min (Feet)" />
     <ColumnMapping inputColumnText="Altitude Max Feet" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Positional" dataType="Altitude Max (Feet)" />
-    <ColumnMapping inputColumnText="Time" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Date Time" dataType="Date" />
-    <ColumnMapping inputColumnText="Time" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Date Time" dataType="Time of Day" />
+    <ColumnMapping inputColumnText="Datetime (UTC)" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Date Time" dataType="Date" />
+    <ColumnMapping inputColumnText="Datetime (UTC)" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Date Time" dataType="Time of Day" />
     <ColumnMapping inputColumnText="Delta Glide Ratio" inputColumnMatchMode="ExactMatch" inputColumnIgnoreCase="False" dataCategory="Positional" dataType="Glide Ratio" />
   </ColumnMappings>
 </DataProfile>
