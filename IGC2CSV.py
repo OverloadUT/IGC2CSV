@@ -1,5 +1,6 @@
 import sys
 import os
+import datetime
 from math import radians, cos, sin, asin, sqrt
 
 print('Number of arguments:', len(sys.argv), 'arguments.')
@@ -29,18 +30,30 @@ def crunch_flight(flight):
   #TODO: All of the TAS stuff needs to be conditional based on if we actually have TAS data
   
   #TODO: Add Altitude Above Landing
-  #TODO: Add Date/Time
   
   for index, record in enumerate(flight['fixrecords']):
+    #thisdatetime = datetime.datetime.strptime(record['timestamp'], '')
     record['latdegrees'] = lat_to_degrees(record['latitude'])
     record['londegrees'] = lon_to_degrees(record['longitude'])
-    #TODO: This timeseconds calculation is terrible - completely breaks if we pass midnight
-    record['timeseconds'] = int(record['timestamp'][0:2])*3600 + int(record['timestamp'][2:4])*60 + int(record['timestamp'][4:6])
+
+    record['time'] = datetime.time(int(record['timestamp'][0:2]), int(record['timestamp'][2:4]), int(record['timestamp'][4:6]), 0, )
     
     if index > 0:
       prevrecord = flight['fixrecords'][index-1]
-      record['time_delta'] = int(record['timeseconds']) - int(prevrecord['timeseconds'])
-      record['running_time'] = int(record['timeseconds']) - flight['time_start']
+
+      # Because we only know the date of the FIRST B record, we have to do some shaky logic to determine when we cross the midnight barrier
+      # There's a theoretical edge case here where two B records are separated by more than 24 hours - this should never actually happen though
+      if(record['time'] < prevrecord['time']):
+        # We crossed the midnight barrier
+        record['date'] = prevrecord['date'] + datetime.timedelta(days=1)
+      else:
+        record['date'] = prevrecord['date']
+
+      record['datetime'] = datetime.datetime.combine(record['date'], record['time'])
+      print(record['datetime'])
+
+      record['time_delta'] = (record['datetime'] - prevrecord['datetime']).total_seconds()
+      record['running_time'] = (record['datetime'] - flight['datetime_start']).total_seconds()
       record['distance_delta'] = haversine(record['londegrees'], record['latdegrees'], prevrecord['londegrees'], prevrecord['latdegrees'])
       flight['distance_total'] += record['distance_delta']
       record['distance_total'] = flight['distance_total']
@@ -58,7 +71,8 @@ def crunch_flight(flight):
       flight['tas_peak'] = max(record['tas'], flight['tas_peak'])
       record['tas_peak'] = flight['tas_peak']
     else:
-      flight['time_start'] = record['timeseconds']
+      flight['time_start'] = record['time']
+      flight['datetime_start'] = datetime.datetime.combine(flight['flightdate'], flight['time_start'])
       flight['altitude_start'] = record['alt-GPS']
       flight['distance_total'] = 0
       flight['climb_total'] = 0
@@ -67,6 +81,8 @@ def crunch_flight(flight):
       flight['groundspeed_peak'] = 0
       flight['tas_peak'] = record['tas']
   
+      record['date'] = flight['flightdate']
+      record['datetime'] = datetime.datetime.combine(record['date'], record['time'])
       record['running_time'] = 0
       record['time_delta'] = 0
       record['distance_delta'] = 0
@@ -87,9 +103,22 @@ def logline_A(line, flight):
   print('Manufacturer:',flight['manufacturer'])
   return
 
+# H Records are headers that give one-time information
+# http://carrier.csi.cam.ac.uk/forsterlewis/soaring/igc_file_format/igc_format_2008.html#link_3.3
 def logline_H(line, flight):
-  print('Header (not implemented):',line[1:])
+  try:
+    headertypes[line[1:5]](line[5:], flight)
+  except KeyError:
+    print('Header (not implemented):',line[1:])
   return
+
+# Flight date header. This is the date that the FIRST B record was made on
+# Date format: DDMMYY
+# (did we learn nothing from Y2K?)
+def logline_H_FDTE(line, flight):
+  flight['flightdate'] = datetime.date(int(line[4:6])+2000, int(line[2:4]), int(line[0:2]))
+  print "Flight date: {}".format(flight['flightdate'])
+
 
 def logline_B(line, flight):
   flight['fixrecords'].append({
@@ -122,6 +151,10 @@ recordtypes = {
   'J' : logline_NotImplemented,
   'K' : logline_NotImplemented,
   'L' : logline_NotImplemented,
+}
+
+headertypes = {
+  'FDTE' : logline_H_FDTE,
 }
 
 # IGC files store latitude as DDMMmmmN
@@ -172,14 +205,15 @@ def get_output_filename(inputfilename):
   outputfilename = filename + '.csv'
   return outputfilename
 
-
 flight = parse_igc(igcfile)
 flight = crunch_flight(flight)
 
 output = open(get_output_filename(fileparam), 'w')
-output.write('Time,Latitude (Degrees),Longitude (Degrees),Altitude GPS,Distance Delta,Distance Total,Groundspeed,Groundspeed Peak,True Airspeed,True Airspeed Peak,Altitude Delta (GPS),Altitude Delta (Pressure),Climb Speed,Climb Total,Max Altitude (flight),Min Altitude (flight), Distance From Start (straight line)\n')
+output.write('Datetime (UTC),Elapsed Time,Latitude (Degrees),Longitude (Degrees),Altitude GPS,Distance Delta,Distance Total,Groundspeed,Groundspeed Peak,True Airspeed,True Airspeed Peak,Altitude Delta (GPS),Altitude Delta (Pressure),Climb Speed,Climb Total,Max Altitude (flight),Min Altitude (flight), Distance From Start (straight line)\n')
 for record in flight['fixrecords']:
-  output.write("{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}\n".format(
+  # TODO: there is probably a cleaner way to do this
+  output.write("{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}\n".format(
+    record['datetime'],
     record['running_time'],
     record['latdegrees'],
     record['londegrees'],
