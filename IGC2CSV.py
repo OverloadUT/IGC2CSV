@@ -3,16 +3,23 @@ import os
 import datetime
 from math import radians, cos, sin, asin, sqrt
 
-def parse_igc(file):
-  flight = {'fixrecords': [], 'optional_records': {}}
+# Reads the IGC file and returns a flight dictionary
+def parse_igc(flight):
+  flight['fixrecords'] = []
+  flight['optional_records'] = {}
+
+  file = open(flight['igcfile'], 'r')
 
   for line in file:
     line = line.rstrip()
     linetype = line[0]
     recordtypes[linetype](line, flight)
+
+  file.close()
     
   return flight
 
+# Adds a bunch of calculated fields to a flight dictionary
 def crunch_flight(flight):
   for index, record in enumerate(flight['fixrecords']):
     #thisdatetime = datetime.datetime.strptime(record['timestamp'], '')
@@ -85,7 +92,6 @@ def crunch_flight(flight):
 
 def logline_A(line, flight):
   flight['manufacturer'] = line[1:]
-  print "Manufacturer: {}".format(flight['manufacturer'])
   return
 
 # H Records are headers that give one-time information
@@ -104,7 +110,7 @@ def logline_H_FDTE(line, flight):
   flight['flightdate'] = datetime.date(int(line[4:6])+2000, int(line[2:4]), int(line[0:2]))
   print "Flight date: {}".format(flight['flightdate'])
 
-  
+
 def logline_I(line, flight):
   num = int(line[1:3])
   for i in xrange(num):
@@ -202,21 +208,7 @@ if __name__ == "__main__":
   print "Number of arguments: {}".format(len(sys.argv))
   print "Argument List: {}".format(str(sys.argv))
 
-  fileparam = sys.argv[1]
-  if os.path.isfile(fileparam):
-    igcfile = open(fileparam, 'r')
-    print "IGC file: {}".format(igcfile.name)
-  else:
-    print 'Parsing direcories not yet supported'
-    exit()
-
-  flight = parse_igc(igcfile)
-  flight = crunch_flight(flight)
-  flight['outputfilename'] = get_output_filename(igcfile.name)
-
-  output = open(flight['outputfilename'], 'w')
-
-  outputfields = [
+  defaultoutputfields = [
     ('Datetime (UTC)', 'record', 'datetime'),
     ('Elapsed Time', 'record', 'running_time'),
     ('Latitude (Degrees)', 'record', 'latdegrees'),
@@ -234,24 +226,56 @@ if __name__ == "__main__":
     ('Min Altitude (flight)', 'flight', 'alt_floor'),
     ('Distance From Start (straight line)', 'record', 'distance_from_start')
     ]
-  if 'TAS' in flight['optional_records']:
-    outputfields.append( ('True Airspeed', 'record', 'opt_tas') )
-    outputfields.append( ('True Airspeed Peak', 'record', 'tas_peak') )
 
-  header = ''
-  for field in outputfields:
-    header += field[0] + ','
-  output.write(header[:-1] + '\n')
+  logbook = []
 
-  for record in flight['fixrecords']:
-    recordline = ''
+  fileparam = sys.argv[1]
+  if os.path.isfile(fileparam):
+    logbook.append({'igcfile': os.path.abspath(fileparam)})
+    print "Single IGC file supplied: {}".format(logbook[-1]['igcfile'])
+  elif os.path.isdir(fileparam):
+    for filename in os.listdir(fileparam):
+      fileabs = os.path.join(fileparam, filename)
+      if not os.path.isfile(fileabs):
+        continue
+
+      root, ext = os.path.splitext(fileabs)
+      if ext.lower() == '.igc'.lower():
+        logbook.append({'igcfile': os.path.abspath(fileabs)})
+  else:
+    print 'Must indicate a file or directory to process'
+    exit()
+
+  print "{} flights ready to process...".format(len(logbook))
+
+  # Parse all files
+  for flight in logbook:
+    flight = parse_igc(flight)
+
+  # Crunch the telemetry numbers on all of the flights
+  for flight in logbook:
+    flight = crunch_flight(flight)
+
+  # Output the CSV file for all flights
+  for flight in logbook:
+    flight['outputfilename'] = get_output_filename(flight['igcfile'])
+
+    output = open(flight['outputfilename'], 'w')
+    outputfields = list(defaultoutputfields)
+    if 'TAS' in flight['optional_records']:
+      outputfields.append( ('True Airspeed', 'record', 'opt_tas') )
+      outputfields.append( ('True Airspeed Peak', 'record', 'tas_peak') )
+
+    header = ''
     for field in outputfields:
-      if field[1] == 'record':
-        recordline += str(record[field[2]]) + ','
-      elif field[1] == 'flight':
-        recordline += str(flight[field[2]]) + ','
-    output.write(recordline[:-1] + '\n')
+      header += field[0] + ','
+    output.write(header[:-1] + '\n')
 
-  #HACK to output everything except for the table of fixrecords
-  flight['fixrecords'] = []
-  print(flight)
+    for record in flight['fixrecords']:
+      recordline = ''
+      for field in outputfields:
+        if field[1] == 'record':
+          recordline += str(record[field[2]]) + ','
+        elif field[1] == 'flight':
+          recordline += str(flight[field[2]]) + ','
+      output.write(recordline[:-1] + '\n')
