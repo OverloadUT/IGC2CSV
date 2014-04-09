@@ -5,6 +5,16 @@ The intention is to make it much easier to look at the flight data in a program 
 
 The CSV output also has a bunch of data derived from the data, allowing quick and easy access to stats like distance traveled, per-second climb rate, total distance climbed, etc. Again, the idea here is to be able to pull this data in to Excel and start graphing it immediately without the need to do a bunch of formula work to get at the interesting statistics.
 
+##Installation
+The current version of IGC2CSV is a command-line tool that requires Python (tested with 2.7.5) to run. To install, simply extract the program to any convenient directory.
+
+##Usage
+You can specify either a single IGC file, or a directory full of IGC files:
+
+    python IGC2CSV.py /path/to/file.igc
+    python IGC2CSV.py /path/to/folder/with/igc/files/
+
+The CSV files will be output in the current working directory
 
 #DashWare
 Another purpose of this program is to put your flight logs in to a format that DashWare can understand, making it possible to create telemetry overlays on your flight videos.
