@@ -28,7 +28,7 @@ DashWare supports a variety of formats natively, but IGC is not one of them. The
 * "Maximum reached" for several fields, allowing you to draw things such as red lines indicating the highest altitude reached in the flight *so far* (as opposed to highest reached ever in the flight)
 * Some other convenience fields such as Lowest and Highest altitude reached, allowing you to draw instruments showing things such as "altitude above LZ"
 
-### Using the DashWare DateProfile
+### Using the DashWare DataProfile
 Copy the IGC2CSV.xml file to your Documents/DashWare/DataProfiles directory.
 
 The DataProfile should automatically detect when you load a compatible CSV in to your DashWare project, but if it does not, you can find it in the list as "IGC2CSV"
