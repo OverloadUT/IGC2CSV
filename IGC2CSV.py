@@ -43,6 +43,7 @@ def crunch_flight(flight):
       record['datetime'] = datetime.datetime.combine(record['date'], record['time'])
       record['time_delta'] = (record['datetime'] - prevrecord['datetime']).total_seconds()
       record['running_time'] = (record['datetime'] - flight['datetime_start']).total_seconds()
+      flight['time_total'] = record['running_time']
       record['distance_delta'] = haversine(record['londegrees'], record['latdegrees'], prevrecord['londegrees'], prevrecord['latdegrees'])
       flight['distance_total'] += record['distance_delta']
       record['distance_total'] = flight['distance_total']
@@ -69,6 +70,7 @@ def crunch_flight(flight):
       flight['alt_peak'] = record['alt-GPS']
       flight['alt_floor'] = record['alt-GPS']
       flight['groundspeed_peak'] = 0
+      flight['time_total'] = 0
   
       record['date'] = flight['flightdate']
       record['datetime'] = datetime.datetime.combine(record['date'], record['time'])
@@ -90,6 +92,14 @@ def crunch_flight(flight):
   
   return flight
 
+def crunch_logbook(logbook):
+  logbook['flight_time'] = 0
+  for flight in logbook['flights']:
+    # TODO This is a HACK for the 6030 having 5 minutes of lead time before the flight
+    logbook['flight_time'] += flight['time_total'] - 300
+    print "Total flight time: {} hours".format(logbook['flight_time']/60/60)
+
+
 def logline_A(line, flight):
   flight['manufacturer'] = line[1:]
   return
@@ -100,7 +110,8 @@ def logline_H(line, flight):
   try:
     headertypes[line[1:5]](line[5:], flight)
   except KeyError:
-    print "Header (not implemented): {}".format(line[1:])
+    return
+    #print "Header (not implemented): {}".format(line[1:])
   return
 
 # Flight date header. This is the date that the FIRST B record was made on
@@ -108,7 +119,9 @@ def logline_H(line, flight):
 # (did we learn nothing from Y2K?)
 def logline_H_FDTE(line, flight):
   flight['flightdate'] = datetime.date(int(line[4:6])+2000, int(line[2:4]), int(line[0:2]))
-  print "Flight date: {}".format(flight['flightdate'])
+
+def logline_H_FGTY(line, flight):
+  flight['glidertype'] = line[11:]
 
 
 def logline_I(line, flight):
@@ -132,6 +145,11 @@ def logline_B(line, flight):
 
   return
 
+# Catchall for line types that we don't care about, such as the "G" checksum records at the end
+def logline_Ignore(line, flight):
+  return
+
+
 def logline_NotImplemented(line, flight):
   print "Record Type {} not implemented: {}".format(line[0:1], line[1:])
   return
@@ -144,7 +162,7 @@ recordtypes = {
   'D' : logline_NotImplemented,
   'E' : logline_NotImplemented,
   'F' : logline_NotImplemented,
-  'G' : logline_NotImplemented,
+  'G' : logline_Ignore, #Checksum at end of file
   'H' : logline_H,
   'I' : logline_I,
   'J' : logline_NotImplemented,
@@ -154,6 +172,7 @@ recordtypes = {
 
 headertypes = {
   'FDTE' : logline_H_FDTE,
+  'FGTY' : logline_H_FGTY,
 }
 
 # IGC files store latitude as DDMMmmmN
@@ -208,7 +227,7 @@ if __name__ == "__main__":
   print "Number of arguments: {}".format(len(sys.argv))
   print "Argument List: {}".format(str(sys.argv))
 
-  defaultoutputfields = [
+  default_flight_output_fields = [
     ('Datetime (UTC)', 'record', 'datetime'),
     ('Elapsed Time', 'record', 'running_time'),
     ('Latitude (Degrees)', 'record', 'latdegrees'),
@@ -227,12 +246,20 @@ if __name__ == "__main__":
     ('Distance From Start (straight line)', 'record', 'distance_from_start')
     ]
 
-  logbook = []
+  default_logbook_output_fields = [
+    ('Datetime (UTC)', 'flight', 'datetime_start'),
+    ('Distance', 'flight', 'distance_total'),
+    ('Total Climb', 'flight', 'climb_total'),
+    ('Max Altitude', 'flight', 'alt_peak'),
+    ('Min Altitude', 'flight', 'alt_floor'),
+    ]
+
+  logbook = {'flights': []}
 
   fileparam = sys.argv[1]
   if os.path.isfile(fileparam):
-    logbook.append({'igcfile': os.path.abspath(fileparam)})
-    print "Single IGC file supplied: {}".format(logbook[-1]['igcfile'])
+    logbook['flights'].append({'igcfile': os.path.abspath(fileparam)})
+    print "Single IGC file supplied: {}".format(logbook['flights'][-1]['igcfile'])
   elif os.path.isdir(fileparam):
     for filename in os.listdir(fileparam):
       fileabs = os.path.join(fileparam, filename)
@@ -241,27 +268,49 @@ if __name__ == "__main__":
 
       root, ext = os.path.splitext(fileabs)
       if ext.lower() == '.igc'.lower():
-        logbook.append({'igcfile': os.path.abspath(fileabs)})
+        logbook['flights'].append({'igcfile': os.path.abspath(fileabs)})
   else:
     print 'Must indicate a file or directory to process'
     exit()
 
-  print "{} flights ready to process...".format(len(logbook))
+  print "{} flights ready to process...".format(len(logbook['flights']))
 
   # Parse all files
-  for flight in logbook:
+  for flight in logbook['flights']:
     flight = parse_igc(flight)
+    print 'Processed flight from {}'.format(flight['flightdate'])
 
   # Crunch the telemetry numbers on all of the flights
-  for flight in logbook:
+  for flight in logbook['flights']:
     flight = crunch_flight(flight)
 
+  crunch_logbook(logbook)
+
+  # Output the logbook summary CSV file
+  output = open('logbook.csv', 'w')
+  outputfields = list(default_logbook_output_fields)
+
+  header = ''
+  for field in outputfields:
+    header += field[0] + ','
+  output.write(header[:-1] + '\n')
+
+  for flight in logbook['flights']:
+    recordline = ''
+    for field in outputfields:
+      if field[1] == 'flight':
+        recordline += str(flight[field[2]]) + ','
+    output.write(recordline[:-1] + '\n')
+
+  output.close()
+
+
   # Output the CSV file for all flights
-  for flight in logbook:
+  for flight in logbook['flights']:
     flight['outputfilename'] = get_output_filename(flight['igcfile'])
 
     output = open(flight['outputfilename'], 'w')
-    outputfields = list(defaultoutputfields)
+    outputfields = list(default_flight_output_fields)
     if 'TAS' in flight['optional_records']:
       outputfields.append( ('True Airspeed', 'record', 'opt_tas') )
       outputfields.append( ('True Airspeed Peak', 'record', 'tas_peak') )
@@ -279,3 +328,12 @@ if __name__ == "__main__":
         elif field[1] == 'flight':
           recordline += str(flight[field[2]]) + ','
       output.write(recordline[:-1] + '\n')
+
+    output.close()
+
+
+
+
+
+
+
