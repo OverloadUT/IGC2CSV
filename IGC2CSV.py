@@ -16,7 +16,7 @@ def parse_igc(flight):
         recordtypes[linetype](line, flight)
 
     file.close()
-        
+
     return flight
 
 # Adds a bunch of calculated fields to a flight dictionary
@@ -27,7 +27,7 @@ def crunch_flight(flight):
         record['londegrees'] = lon_to_degrees(record['longitude'])
 
         record['time'] = datetime.time(int(record['timestamp'][0:2]), int(record['timestamp'][2:4]), int(record['timestamp'][4:6]), 0, )
-        
+
         if index > 0:
             prevrecord = flight['fixrecords'][index-1]
 
