@@ -30,8 +30,7 @@ def lon_to_degrees(lon):
 
 
 def haversine(lon1, lat1, lon2, lat2):
-    """
-    Calculate the great circle distance between two points
+    """Calculate the great circle distance between two points
     on the earth (specified in decimal degrees)
     """
     # convert decimal degrees to radians
@@ -46,6 +45,15 @@ def haversine(lon1, lat1, lon2, lat2):
     return km
 
 
+def straight_line_distance(lon1, lat1, alt1, lon2, lat2, alt2):
+    """Calculates the distance between two sets of latitude, longitude, and
+    altitude, as a straight line"""
+    a = haversine(lon1, lat1, lon2, lat2)
+    b = (alt1 - alt2) / 1000.  # convert meters to km
+    c = sqrt(a**2. + b**2.)
+    return c
+
+
 class Flight(object):
     """A single flight"""
     def __init__(self, igcfile=None):
@@ -54,7 +62,9 @@ class Flight(object):
         self.parsewarnings = []
         self.fixrecords = []
         self.auxdata = {}
+        self.flightdata = {}
         self.date = None
+        self.filename = None
 
         if igcfile is not None:
             self.load_igc(igcfile)
@@ -69,6 +79,7 @@ class Flight(object):
         else:
             fileobj = igcfile
 
+        self.filename = fileobj.name
         with fileobj:
             for line in fileobj:
                 self._parseline(line)
@@ -129,7 +140,7 @@ class Flight(object):
         for i in xrange(num):
             # Each optional record definition is 7 bytes
             field = line[3+7*i:10+7*i]
-            opt_record_name = field[4:7]
+            opt_record_name = field[4:7].lower()
             startbyte = int(field[0:2])-1
             endbyte = int(field[2:4])
             self.optfields[opt_record_name] = (startbyte, endbyte)
