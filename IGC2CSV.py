@@ -19,7 +19,7 @@ def crunch_flight(flight):
             record['distance_delta'] = flightlog.haversine(record['longitude'], record['latitude'], prevrecord['longitude'], prevrecord['latitude'])
             flightdata['distance_total'] += record['distance_delta']
             record['distance_total'] = flightdata['distance_total']
-            record['distance_from_start'] = flightlog.straight_line_distance(record['longitude'], record['latitude'], record['alt_gps'], flight.fixrecords[0]['longitude'], flight.fixrecords[0]['latitude'], flight.fixrecords[0]['alt_gps'])
+            record['distance_from_start'] = flightlog.abs_distance(record['longitude'], record['latitude'], record['alt_gps'], flight.fixrecords[0]['longitude'], flight.fixrecords[0]['latitude'], flight.fixrecords[0]['alt_gps'])
             record['groundspeed'] = record['distance_delta'] / record['time_delta'] * 3600
             flightdata['groundspeed_peak'] = max(record['groundspeed'], flightdata['groundspeed_peak'])
             record['groundspeed_peak'] = flightdata['groundspeed_peak']

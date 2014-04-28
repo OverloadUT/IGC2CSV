@@ -5,8 +5,14 @@ import flightlog
 
 def test_haversine():
     """Calculate distance using haversine formula"""
-    km = flightlog.haversine(100, 10, 180, 50)
-    assert int(km) == 8438
+    km = flightlog.haversine(0, 0, 100, 100)
+    assert int(km) == 9809
+
+
+def test_haversine_zero():
+    """Use haversine for zero distance traveled"""
+    km = flightlog.haversine(100, 100, 100, 100)
+    assert int(km) == 0
 
 
 def test_lat_to_degrees():
@@ -27,6 +33,13 @@ def test_lon_to_degrees():
     # West is negative
     expected = (120 + 59.999/60) * -1
     assert flightlog.lon_to_degrees("12059999W") == expected
+
+
+def test_abs_distance():
+    """Calculate 3-dimensional distance traveled"""
+    assert flightlog.abs_distance(0, 0, 0, 0, 0, 10000) == 10
+    assert flightlog.abs_distance(0, 0, 0, 0, 0, 0) == 0
+    assert int(flightlog.abs_distance(0, 0, 0, 1, 1, 100000)) == 186
 
 
 class TestFlight():

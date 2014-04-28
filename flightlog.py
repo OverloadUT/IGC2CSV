@@ -45,9 +45,10 @@ def haversine(lon1, lat1, lon2, lat2):
     return km
 
 
-def straight_line_distance(lon1, lat1, alt1, lon2, lat2, alt2):
+def abs_distance(lon1, lat1, alt1, lon2, lat2, alt2):
     """Calculates the distance between two sets of latitude, longitude, and
     altitude, as a straight line"""
+    # TODO: allow passing the fixrecord, or tuples
     a = haversine(lon1, lat1, lon2, lat2)
     b = (alt1 - alt2) / 1000.  # convert meters to km
     c = sqrt(a**2. + b**2.)
@@ -57,7 +58,6 @@ def straight_line_distance(lon1, lat1, alt1, lon2, lat2, alt2):
 class Flight(object):
     """A single flight"""
     def __init__(self, igcfile=None):
-        self._crunched = False
         self.optfields = {}
         self.parsewarnings = []
         self.fixrecords = []
