@@ -66,10 +66,10 @@ class TestFlight():
         """Parse a valid I record"""
         flight = flightlog.Flight()
         flight._parseline("I023638FXA3941ENL")
-        assert "FXA" in flight.optfields
-        assert flight.optfields['FXA'] == (35, 38)
-        assert "ENL" in flight.optfields
-        assert flight.optfields['ENL'] == (38, 41)
+        assert "fxa" in flight.optfields
+        assert flight.optfields['fxa'] == (35, 38)
+        assert "enl" in flight.optfields
+        assert flight.optfields['enl'] == (38, 41)
 
     def test_logline_h_flightdate_invalid_date(self):
         """Raise exception when invalid date in the H record"""
