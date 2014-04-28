@@ -4,7 +4,7 @@ from math import radians, sin, cos, asin, sqrt
 
 
 def lat_to_degrees(lat):
-    """Convert an IGC-spec lattitude string to degrees
+    """Convert an IGC-spec latitude string to degrees
 
     IGC files store latitude as DDMMmmmN
     """
@@ -50,7 +50,7 @@ class Flight(object):
     """A single flight"""
     def __init__(self, igcfile=None):
         self._crunched = False
-        self.optionalrecords = {}
+        self.optfields = {}
         self.parsewarnings = []
         self.fixrecords = []
         self.auxdata = {}
@@ -132,7 +132,7 @@ class Flight(object):
             opt_record_name = field[4:7]
             startbyte = int(field[0:2])-1
             endbyte = int(field[2:4])
-            self.optionalrecords[opt_record_name] = (startbyte, endbyte)
+            self.optfields[opt_record_name] = (startbyte, endbyte)
 
     def _logline_b(self, line):
         """B RECORD - FIX
@@ -140,6 +140,12 @@ class Flight(object):
         The actual during-flight meat and potatoes: a GPS fix record.
         Also contains any optional fields defined in the I record
         """
+
+        if self.date is None:
+            errormsg = ("Reached a B record without the flight date "
+                        "being declared")
+            raise IGCError(msg=errormsg, line_text=line)
+
         timestamp = line[1:7]
         time = datetime.time(
             int(timestamp[0:2]),
@@ -147,27 +153,35 @@ class Flight(object):
             int(timestamp[4:6]),
             0, None)
 
-        # TODO WIP
-
-        raise Exception("Work in progress")
-
         try:
-            date = self.fixrecords[-1].datetime.date
+            date = self.fixrecords[-1]['datetime'].date()
+            if self.fixrecords[-1]['datetime'].time() > time:
+                # If this record's time is seemingly earlier than the previous
+                # record's, it means we've moved to the next day.
+                date += datetime.timedelta(days=1)
         except IndexError:
-            date = self.datetime
+            # There is no previous record, so this record's date is the
+            # flight start date
+            date = self.date
 
-        self.fixrecords.append({
-            'timestamp': line[1:7],
-            'latitude':  lat_to_degrees(line[7:15]),
-            'longitude': lon_to_degrees(line[15:24]),
-            'avflag':    line[24:25] == "A",
-            'pressure':  int(line[25:30]),
-            'alt_gps':   int(line[30:35]),
-        })
-        # Grab all of the optional fields as defined by the I record
-        for key, record in self.optionalrecords.iteritems():
+        mydatetime = datetime.datetime.combine(date, time)
+
+        newrecord = {
+            'datetime':       mydatetime,
+            'latitude':       lat_to_degrees(line[7:15]),
+            'longitude':      lon_to_degrees(line[15:24]),
+            'avflag':         line[24:25] == "A",
+            'pressure':       int(line[25:30]),
+            'alt_gps':        int(line[30:35]),
+            'optfields': {},
+        }
+
+        for key, record in self.optfields.iteritems():
+            # Grab all of the optional fields as defined by the I record
             optionalfield = line[record[0]:record[1]]
-            self.fixrecords[-1]['opt_' + key.lower()] = optionalfield
+            newrecord['optfields'][key.lower()] = optionalfield
+
+        self.fixrecords.append(newrecord)
 
     def _logline_ignore(self, line):
         """An ingnored IGC record, such as the "G" checksum records"""
@@ -213,7 +227,7 @@ class IGCError(Error):
         msg  -- explanation of the error
         line_num -- The line number of the igc file where the error occurred
     """
-    def __init__(self, line_text, msg="", line_num=0):
+    def __init__(self, line_text="", msg="", line_num=0):
         super(IGCError, self).__init__()
         self.line_text = line_text
         self.msg = msg

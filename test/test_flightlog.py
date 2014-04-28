@@ -4,11 +4,13 @@ import flightlog
 
 
 def test_haversine():
+    """Calculate distance using haversine formula"""
     km = flightlog.haversine(100, 10, 180, 50)
     assert int(km) == 8438
 
 
 def test_lat_to_degrees():
+    """Convert IGC-spec latitude string to decimal degrees"""
     # North is positive
     expected = 52 + 10.978/60
     assert flightlog.lat_to_degrees("5210978N") == expected
@@ -18,6 +20,7 @@ def test_lat_to_degrees():
 
 
 def test_lon_to_degrees():
+    """Convert IGC-spec longitude string to decimal degrees"""
     # East is positive
     expected = 0 + 6.639/60
     assert flightlog.lon_to_degrees("00006639E") == expected
@@ -27,49 +30,49 @@ def test_lon_to_degrees():
 
 
 class TestFlight():
-    def setUp(self):
-        pass
-
-    def tearDown(self):
-        pass
-
-    def test_fail(self):
-        raise Exception("Unit tests not yet complete; results cannot be trusted")
-
     @raises(IOError)
     def test_init_file_does_not_exist(self):
+        """Raise exception if nonexistent igc file specified"""
         flightlog.Flight('a_file_that_does_not_exist.igc')
 
     def test_logline_a_valid(self):
+        """Parse a valid A record"""
         flight = flightlog.Flight()
         flight._parseline("A123ABCXYZ:1")
         assert flight.auxdata['flightrecorder'] == "123ABCXYZ:1"
 
     def test_logline_a_blank(self):
+        """Parse a blank A record"""
         flight = flightlog.Flight()
         flight._parseline("A")
         assert flight.auxdata['flightrecorder'] == ""
 
     def test_logline_h_flightdate(self):
+        """Parse a valid flight date H record"""
         import datetime
         flight = flightlog.Flight()
         flight._parseline("HFDTE250809")
         assert flight.date == datetime.date(2009, 8, 25)
 
     def test_logline_h_glidertype(self):
+        """Parse a valid glidertype H record"""
         flight = flightlog.Flight()
         flight._parseline("HFGTYGLIDERTYPE:LS_8-18")
         assert flight.auxdata['glidertype'] == "LS_8-18"
+        flight._parseline("HFGTYGLIDERTYPE:")
+        assert flight.auxdata['glidertype'] == ""
 
     def test_logline_i_valid(self):
+        """Parse a valid I record"""
         flight = flightlog.Flight()
         flight._parseline("I023638FXA3941ENL")
-        assert "FXA" in flight.optionalrecords
-        assert flight.optionalrecords['FXA'] == (35, 38)
-        assert "ENL" in flight.optionalrecords
-        assert flight.optionalrecords['ENL'] == (38, 41)
+        assert "FXA" in flight.optfields
+        assert flight.optfields['FXA'] == (35, 38)
+        assert "ENL" in flight.optfields
+        assert flight.optfields['ENL'] == (38, 41)
 
     def test_logline_h_flightdate_invalid_date(self):
+        """Raise exception when invalid date in the H record"""
         flight = flightlog.Flight()
         # Month is 13
         assert_raises(flightlog.IGCError, flight._parseline, "HFDTE251309")
@@ -80,14 +83,101 @@ class TestFlight():
         # No year
         assert_raises(flightlog.IGCError, flight._parseline, "HFDTE2513")
 
+    @raises(flightlog.IGCError)
+    def test_logline_b_missing_flightdate(self):
+        """Raise an assert when B records are encountered before the flight
+        date is set
+        """
+        flight = flightlog.Flight()
+        flight._parseline("B1049155210978N00006639WA0011400065031000")
+
+    def test_logline_b_valid(self):
+        """Parse a valid B record with no optional fields"""
+        import datetime
+        flight = flightlog.Flight()
+        flight.date = datetime.date(2009, 1, 1)
+        flight._parseline("B1049155210978N00006639WA0011400065")
+        assert len(flight.fixrecords) == 1
+        testrecord = flight.fixrecords[0]
+        assert (testrecord['datetime']
+                == datetime.datetime(2009, 1, 1, 10, 49, 15))
+        assert testrecord['latitude'] == 52 + 10.978/60
+        assert testrecord['longitude'] == (0 + 6.639/60) * -1
+        assert testrecord['avflag'] is True
+        assert testrecord['pressure'] == 114
+        assert testrecord['alt_gps'] == 65
+
+    def test_logline_b_two_records_across_days(self):
+        """Parse two B records that cross midnight and properly
+        handle the date change"""
+        import datetime
+        flight = flightlog.Flight()
+        flight.date = datetime.date(2009, 1, 1)
+        flight._parseline("B2242175210978N00006639WA0011400065")
+        flight._parseline("B0946085230417N00053009EV0084200805")
+        assert len(flight.fixrecords) == 2
+        testrecord = flight.fixrecords[0]
+        assert (testrecord['datetime']
+                == datetime.datetime(2009, 1, 1, 22, 42, 17))
+        assert testrecord['latitude'] == 52 + 10.978/60
+        assert testrecord['longitude'] == (0 + 6.639/60) * -1
+        assert testrecord['avflag'] is True
+        assert testrecord['pressure'] == 114
+        assert testrecord['alt_gps'] == 65
+        testrecord = flight.fixrecords[1]
+        assert (testrecord['datetime']
+                == datetime.datetime(2009, 1, 2, 9, 46, 8))
+        assert testrecord['latitude'] == 52 + 30.417/60
+        assert testrecord['longitude'] == (0 + 53.009/60)
+        assert testrecord['avflag'] is False
+        assert testrecord['pressure'] == 842
+        assert testrecord['alt_gps'] == 805
+
+    def test_logline_b_with_optional_fields(self):
+        """Parse a B record with optional fields"""
+        import datetime
+        flight = flightlog.Flight()
+        flight.date = datetime.date(2009, 1, 1)
+        flight._parseline("I023638FXA3941ENL")
+        flight._parseline("B1246085230417N00053009EA0084200805034002")
+        testrecord = flight.fixrecords[0]
+        print testrecord['optfields']
+        assert 'fxa' in testrecord['optfields']
+        assert testrecord['optfields']['fxa'] == "034"
+        assert 'enl' in testrecord['optfields']
+        assert testrecord['optfields']['enl'] == "002"
+
     def test_init_simple_igc_file(self):
+        """Parse a sample igc file that is very short"""
         import datetime
         flight = flightlog.Flight('test/sample_simple_igc_file.txt')
         assert flight.auxdata['flightrecorder'] == "LXNGIIFLIGHT:1"
         assert flight.date == datetime.date(2009, 8, 25)
         assert len(flight.fixrecords) == 1
-        assert len(flight.optionalrecords) == 0
+        assert len(flight.optfields) == 0
+
+    def test_init_with_file_object(self):
+        """Generate a flight using a file object"""
+        import datetime
+        fileobj = open('test/sample_simple_igc_file.txt')
+        flight = flightlog.Flight(fileobj)
+        assert flight.auxdata['flightrecorder'] == "LXNGIIFLIGHT:1"
+        assert flight.date == datetime.date(2009, 8, 25)
+        assert len(flight.fixrecords) == 1
+        assert len(flight.optfields) == 0
 
     def test_init_complex_igc_file(self):
+        """Parse a complex igc file"""
         flight = flightlog.Flight('test/sample_complex_igc_file.txt')
         assert len(flight.fixrecords) == 1144
+
+
+class TestIGCError():
+    def test_string(self):
+        """Ensure IGCErrors output messages properly"""
+        try:
+            raise flightlog.IGCError(line_num=10, msg="unit test")
+        except flightlog.IGCError as e:
+            assert type(e) is flightlog.IGCError
+            print e
+            assert "unit test" in str(e)
