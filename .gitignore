@@ -2,6 +2,7 @@
 ## IGC2CSV Specific
 #################
 *.csv
+htmlcov/
 
 
 #################
