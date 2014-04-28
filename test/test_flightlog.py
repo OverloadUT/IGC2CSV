@@ -159,7 +159,7 @@ class TestFlight():
     def test_init_with_file_object(self):
         """Generate a flight using a file object"""
         import datetime
-        fileobj = open('test/sample_simple_igc_file.txt')
+        fileobj = open('test/sample_simple_igc_file.txt', 'r')
         flight = flightlog.Flight(fileobj)
         assert flight.auxdata['flightrecorder'] == "LXNGIIFLIGHT:1"
         assert flight.date == datetime.date(2009, 8, 25)
