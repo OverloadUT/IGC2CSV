@@ -6,4 +6,4 @@ python:
 install:
   - "pip install coverage"
 # command to run tests
-script: nosetests -v --with-coverage --cover-tests
+script: nosetests -v --with-coverage --cover-tests --cover-min-percentage=100
