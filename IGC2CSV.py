@@ -3,21 +3,6 @@ import os
 import datetime
 from math import radians, cos, sin, asin, sqrt
 
-# Reads the IGC file and returns a flight dictionary
-def parse_igc(flight):
-    flight['fixrecords'] = []
-    flight['optional_records'] = {}
-
-    file = open(flight['igcfile'], 'r')
-
-    for line in file:
-        line = line.rstrip()
-        linetype = line[0]
-        recordtypes[linetype](line, flight)
-
-    file.close()
-
-    return flight
 
 # Adds a bunch of calculated fields to a flight dictionary
 def crunch_flight(flight):
@@ -99,115 +84,6 @@ def crunch_logbook(logbook):
         logbook['flight_time'] += flight['time_total'] - 300
         print "Total flight time: {:.2f} hours".format(logbook['flight_time']/60/60)
 
-
-def logline_A(line, flight):
-    flight['manufacturer'] = line[1:]
-    return
-
-# H Records are headers that give one-time information
-# http://carrier.csi.cam.ac.uk/forsterlewis/soaring/igc_file_format/igc_format_2008.html#link_3.3
-def logline_H(line, flight):
-    try:
-        headertypes[line[1:5]](line[5:], flight)
-    except KeyError:
-        return
-        #print "Header (not implemented): {}".format(line[1:])
-    return
-
-# Flight date header. This is the date that the FIRST B record was made on
-# Date format: DDMMYY
-# (did we learn nothing from Y2K?)
-def logline_H_FDTE(line, flight):
-    flight['flightdate'] = datetime.date(int(line[4:6])+2000, int(line[2:4]), int(line[0:2]))
-
-def logline_H_FGTY(line, flight):
-    flight['glidertype'] = line[11:]
-
-
-def logline_I(line, flight):
-    num = int(line[1:3])
-    for i in xrange(num):
-        field = line[3+7*i:10+7*i]
-        flight['optional_records'][field[4:7]] = (int(field[0:2])-1, int(field[2:4]))
-
-
-def logline_B(line, flight):
-    flight['fixrecords'].append({
-        'timestamp' : line[1:7],
-        'latitude'  : line[7:15],
-        'longitude' : line[15:24],
-        'AVflag'    : line[24:25] == "A",
-        'pressure'  : int(line[25:30]),
-        'alt-GPS'   : int(line[30:35]),
-    })
-    for key, record in flight['optional_records'].iteritems():
-        flight['fixrecords'][-1]['opt_' +  key.lower()] = line[record[0]:record[1]]
-
-    return
-
-# Catchall for line types that we don't care about, such as the "G" checksum records at the end
-def logline_Ignore(line, flight):
-    return
-
-
-def logline_NotImplemented(line, flight):
-    print "Record Type {} not implemented: {}".format(line[0:1], line[1:])
-    return
-
-    
-recordtypes = {
-    'A' : logline_A,
-    'B' : logline_B,
-    'C' : logline_NotImplemented,
-    'D' : logline_NotImplemented,
-    'E' : logline_NotImplemented,
-    'F' : logline_NotImplemented,
-    'G' : logline_Ignore, #Checksum at end of file
-    'H' : logline_H,
-    'I' : logline_I,
-    'J' : logline_NotImplemented,
-    'K' : logline_NotImplemented,
-    'L' : logline_NotImplemented,
-}
-
-headertypes = {
-    'FDTE' : logline_H_FDTE,
-    'FGTY' : logline_H_FGTY,
-}
-
-# IGC files store latitude as DDMMmmmN
-def lat_to_degrees(lat):
-    direction = {'N':1, 'S':-1}
-    degrees = int(lat[0:2])
-    minutes = int(lat[2:7])
-    minutes /= 1000.
-    directionmod = direction[lat[7]]
-    return (degrees + minutes/60.) * directionmod
-    
-# IGC files store longitude as DDDMMmmmN
-def lon_to_degrees(lon):
-    direction = {'E': 1, 'W':-1}
-    degrees = int(lon[0:3])
-    minutes = int(lon[3:8])
-    minutes /= 1000.
-    directionmod = direction[lon[8]]
-    return (degrees + minutes/60.) * directionmod
-
-# haversine calculates the distance between two pairs of latitude/longitude
-def haversine(lon1, lat1, lon2, lat2):
-    """
-    Calculate the great circle distance between two points 
-    on the earth (specified in decimal degrees)
-    """
-    # convert decimal degrees to radians 
-    lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
-    # haversine formula 
-    dlon = lon2 - lon1 
-    dlat = lat2 - lat1 
-    a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
-    c = 2 * asin(sqrt(a)) 
-    km = 6367 * c
-    return km
 
 # Calculates the distance between two sets of latitude, longitude, and altitude, as a straight line
 def straight_line_distance(lon1, lat1, alt1, lon2, lat2, alt2):
