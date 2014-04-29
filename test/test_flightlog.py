@@ -5,13 +5,21 @@ import flightlog
 
 def test_haversine():
     """Calculate distance using haversine formula"""
-    km = flightlog.haversine(0, 0, 100, 100)
+    fix1 = flightlog.FixRecord(
+        {'latitude': 100, 'longitude': 100})
+    fix2 = flightlog.FixRecord(
+        {'latitude': 0, 'longitude': 0})
+    km = flightlog.haversine(fix1, fix2)
     assert int(km) == 9809
 
 
 def test_haversine_zero():
     """Use haversine for zero distance traveled"""
-    km = flightlog.haversine(100, 100, 100, 100)
+    fix1 = flightlog.FixRecord(
+        {'latitude': 100, 'longitude': 100})
+    fix2 = flightlog.FixRecord(
+        {'latitude': 100, 'longitude': 100})
+    km = flightlog.haversine(fix1, fix2)
     assert int(km) == 0
 
 
@@ -37,9 +45,21 @@ def test_lon_to_degrees():
 
 def test_abs_distance():
     """Calculate 3-dimensional distance traveled"""
-    assert flightlog.abs_distance(0, 0, 0, 0, 0, 10000) == 10
-    assert flightlog.abs_distance(0, 0, 0, 0, 0, 0) == 0
-    assert int(flightlog.abs_distance(0, 0, 0, 1, 1, 100000)) == 186
+    fix1 = flightlog.FixRecord(
+        {'latitude': 0, 'longitude': 0, 'alt_gps': 0})
+    fix2 = flightlog.FixRecord(
+        {'latitude': 0, 'longitude': 0, 'alt_gps': 10000})
+    fix3 = flightlog.FixRecord(
+        {'latitude': 1, 'longitude': 1, 'alt_gps': 100000})
+
+    assert flightlog.abs_distance(fix1, fix2) == 10
+    assert flightlog.abs_distance(fix1, fix1) == 0
+    assert int(flightlog.abs_distance(fix1, fix3)) == 186
+
+
+class TestFixRecord():
+    def test_compute_deltas(self):
+        raise NotImplementedError("Need unit tests for the deltas conputation")
 
 
 class TestFlight():
@@ -52,13 +72,13 @@ class TestFlight():
         """Parse a valid A record"""
         flight = flightlog.Flight()
         flight._parseline("A123ABCXYZ:1")
-        assert flight.auxdata['flightrecorder'] == "123ABCXYZ:1"
+        assert flight.flightinfo['flightrecorder'] == "123ABCXYZ:1"
 
     def test_logline_a_blank(self):
         """Parse a blank A record"""
         flight = flightlog.Flight()
         flight._parseline("A")
-        assert flight.auxdata['flightrecorder'] == ""
+        assert flight.flightinfo['flightrecorder'] == ""
 
     def test_logline_h_flightdate(self):
         """Parse a valid flight date H record"""
@@ -71,9 +91,9 @@ class TestFlight():
         """Parse a valid glidertype H record"""
         flight = flightlog.Flight()
         flight._parseline("HFGTYGLIDERTYPE:LS_8-18")
-        assert flight.auxdata['glidertype'] == "LS_8-18"
+        assert flight.flightinfo['glidertype'] == "LS_8-18"
         flight._parseline("HFGTYGLIDERTYPE:")
-        assert flight.auxdata['glidertype'] == ""
+        assert flight.flightinfo['glidertype'] == ""
 
     def test_logline_i_valid(self):
         """Parse a valid I record"""
@@ -154,7 +174,6 @@ class TestFlight():
         flight._parseline("I023638FXA3941ENL")
         flight._parseline("B1246085230417N00053009EA0084200805034002")
         testrecord = flight.fixrecords[0]
-        print testrecord['optfields']
         assert 'fxa' in testrecord['optfields']
         assert testrecord['optfields']['fxa'] == "034"
         assert 'enl' in testrecord['optfields']
@@ -164,7 +183,7 @@ class TestFlight():
         """Parse a sample igc file that is very short"""
         import datetime
         flight = flightlog.Flight('test/sample_simple_igc_file.txt')
-        assert flight.auxdata['flightrecorder'] == "LXNGIIFLIGHT:1"
+        assert flight.flightinfo['flightrecorder'] == "LXNGIIFLIGHT:1"
         assert flight.date == datetime.date(2009, 8, 25)
         assert len(flight.fixrecords) == 1
         assert len(flight.optfields) == 0
@@ -174,7 +193,7 @@ class TestFlight():
         import datetime
         fileobj = open('test/sample_simple_igc_file.txt', 'r')
         flight = flightlog.Flight(fileobj)
-        assert flight.auxdata['flightrecorder'] == "LXNGIIFLIGHT:1"
+        assert flight.flightinfo['flightrecorder'] == "LXNGIIFLIGHT:1"
         assert flight.date == datetime.date(2009, 8, 25)
         assert len(flight.fixrecords) == 1
         assert len(flight.optfields) == 0
@@ -192,5 +211,4 @@ class TestIGCError():
             raise flightlog.IGCError(line_num=10, msg="unit test")
         except flightlog.IGCError as e:
             assert type(e) is flightlog.IGCError
-            print e
             assert "unit test" in str(e)

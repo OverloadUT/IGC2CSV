@@ -29,10 +29,18 @@ def lon_to_degrees(lon):
     return (degrees + minutes/60.) * directionmod
 
 
-def haversine(lon1, lat1, lon2, lat2):
+def haversine(fixone, fixtwo):
     """Calculate the great circle distance between two points
     on the earth (specified in decimal degrees)
     """
+    try:
+        lon1 = fixone['longitude']
+        lat1 = fixone['latitude']
+        lon2 = fixtwo['longitude']
+        lat2 = fixtwo['latitude']
+    except ValueError:
+        raise TypeError("Requires 2 FixRecords")
+
     # convert decimal degrees to radians
     (lon1, lat1, lon2, lat2) = [radians(x) for x in [lon1, lat1, lon2, lat2]]
     # haversine formula
@@ -45,14 +53,70 @@ def haversine(lon1, lat1, lon2, lat2):
     return km
 
 
-def abs_distance(lon1, lat1, alt1, lon2, lat2, alt2):
+def abs_distance(fixone, fixtwo):
     """Calculates the distance between two sets of latitude, longitude, and
     altitude, as a straight line"""
-    # TODO: allow passing the fixrecord, or tuples
-    a = haversine(lon1, lat1, lon2, lat2)
+    try:
+        alt1 = fixone['alt_gps']
+        alt2 = fixtwo['alt_gps']
+    except ValueError:
+        raise TypeError("Requires 2 FixRecords")
+
+    a = haversine(fixone, fixtwo)
     b = (alt1 - alt2) / 1000.  # convert meters to km
     c = sqrt(a**2. + b**2.)
     return c
+
+
+class FixRecord(dict):
+    """A single GPS fix record"""
+
+    def __init__(self, *args, **kwargs):
+        """Pass in a "prev" named parameter to define the record coming
+        immediately before this one in a flight
+        """
+        dict.__init__(self, *args)
+        self.prev = kwargs.get('prev')
+        self.first = self.prev.first if self.prev is not None else self
+        if self.prev:
+            self.compute_deltas()
+
+    def compute_deltas(self):
+        """Compute the various delta values for convenient access"""
+        prev = self.prev
+        first = self.first
+
+        # Time difference since previous record, in seconds
+        self['time_delta'] = (self['datetime'] - prev['datetime']).seconds
+        self['time_total'] = prev.get('time_total', 0) + self['time_delta']
+
+        # Distance over the ground
+        self['dist_delta'] = haversine(self, prev)
+        self['dist_total'] = prev.get('dist_total', 0) + self['dist_delta']
+        self['dist_from_start'] = haversine(self, first)
+
+        # "True Distance" - the distance traveled through 3D space
+        # relative to the Earth
+        self['truedist_delta'] = abs_distance(self, prev)
+        self['truedist_total'] = (
+            prev.get('truedist_total', 0) + self['truedist_delta'])
+        self['truedist_from_start'] = abs_distance(self, first)
+
+        # Speed calculations
+        self['groundspeed'] = self['dist_delta'] / self['time_delta']
+        self['groundspeed_peak'] = max(
+            self['groundspeed'],
+            prev.get('groundspeed_peak', 0))
+        self['truespeed'] = self['truedist_delta'] / self['time_delta']
+        self['truespeed_peak'] = max(
+            self['truespeed'],
+            prev.get('truespeed_peak', 0))
+
+        # Altitude and climb rates
+        self['alt_delta'] = self['alt_gps'] - prev['alt_gps']
+        self['climb_speed'] = self['alt_delta'] / self['time_delta']
+        self['climb_total_abs'] = (
+            prev.get('climb_total_abs', 0) + abs(self['alt_delta']))
 
 
 class Flight(object):
@@ -61,8 +125,7 @@ class Flight(object):
         self.optfields = {}
         self.parsewarnings = []
         self.fixrecords = []
-        self.auxdata = {}
-        self.flightdata = {}
+        self.flightinfo = {}
         self.date = None
         self.filename = None
 
@@ -95,7 +158,7 @@ class Flight(object):
         """A RECORD - FR ID NUMBER
 
         The unique identifier of the flight recorder"""
-        self.auxdata['flightrecorder'] = line[1:]
+        self.flightinfo['flightrecorder'] = line[1:]
 
     # H Records are headers that give one-time information
     # http://carrier.csi.cam.ac.uk/forsterlewis/soaring/igc_file_format/igc_format_2008.html#link_3.3
@@ -127,7 +190,7 @@ class Flight(object):
 
     def _logline_h_glidertype(self, line):
         """The glider type"""
-        self.auxdata['glidertype'] = line[11:]
+        self.flightinfo['glidertype'] = line[11:]
 
     def _logline_i(self, line):
         """I RECORD - EXTENSIONS TO THE FIX B RECORD
@@ -192,7 +255,12 @@ class Flight(object):
             optionalfield = line[record[0]:record[1]]
             newrecord['optfields'][key.lower()] = optionalfield
 
-        self.fixrecords.append(newrecord)
+        try:
+            prevrecord = self.fixrecords[-1]
+        except IndexError:
+            prevrecord = None
+
+        self.fixrecords.append(FixRecord(newrecord, prev=prevrecord))
 
     def _logline_ignore(self, line):
         """An ingnored IGC record, such as the "G" checksum records"""
