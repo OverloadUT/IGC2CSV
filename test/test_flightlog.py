@@ -57,6 +57,13 @@ def test_abs_distance():
     assert int(flightlog.abs_distance(fix1, fix3)) == 186
 
 
+def test_todo_true_airspeed(self):
+    raise NotImplementedError("Need to handle computations for true airspeed (tas_peak)")
+
+def test_todo_alt_peak_and_floor(self):
+    raise NotImplementedError("Need to compute max and min altitude, and alt range for the flight")
+
+
 class TestFixRecord():
     def test_compute_deltas(self):
         raise NotImplementedError("Need unit tests for the deltas conputation")

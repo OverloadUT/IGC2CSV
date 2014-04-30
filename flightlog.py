@@ -82,7 +82,7 @@ class FixRecord(dict):
             self.compute_deltas()
 
     def compute_deltas(self):
-        """Compute the various delta values for convenient access"""
+        """Compute and store the various delta values for convenient access"""
         prev = self.prev
         first = self.first
 
@@ -146,6 +146,20 @@ class Flight(object):
         with fileobj:
             for line in fileobj:
                 self._parseline(line)
+
+        self.compute_stats()
+
+    """
+    TODO
+    alt_peak
+    alt_floor
+    """
+    def compute_stats(self):
+        self.flightinfo['takeoff_datetime'] = self.fixrecords[0]['datetime']
+        self.flightinfo['time_total'] = self.fixrecords[-1]['time_total']
+        self.flightinfo['dist_total'] = self.fixrecords[-1]['dist_total']
+        self.flightinfo['groundspeed_peak'] = self.fixrecords[-1]['groundspeed_peak']
+        self.flightinfo['climb_total_abs'] = self.fixrecords[-1]['climb_total_abs']
 
     def _parseline(self, line):
         """Parse a single line of an IGC file and add its data"""
