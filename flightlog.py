@@ -116,7 +116,7 @@ class FixRecord(dict):
         self['alt_delta'] = self['alt_gps'] - prev['alt_gps']
         self['climb_speed'] = self['alt_delta'] / self['time_delta']
         self['climb_total_abs'] = (
-            prev.get('climb_total_abs', 0) + abs(self['alt_delta']))
+            prev.get('climb_total_abs', 0) + max(0, self['alt_delta']))
 
 
 class Flight(object):

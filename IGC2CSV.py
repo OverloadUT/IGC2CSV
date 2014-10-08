@@ -1,6 +1,7 @@
 import sys
 import os
 import flightlog
+import datetime
 
 
 def crunch_logbook(logbook):
@@ -42,10 +43,28 @@ def main():
         ('Distance From Start (straight line)', 'record', 'dist_from_start')
         ]
 
+    def logbook_output_datetime(flight):
+        return flight.flightinfo['takeoff_datetime']
+
+    def logbook_output_distance(flight):
+        return flight.flightinfo['dist_total']
+
+    def logbook_output_totalclimb(flight):
+        return flight.flightinfo['climb_total_abs']
+
+    def logbook_output_flighttime(flight):
+        return flight.flightinfo['time_total'] - 240
+
+    def logbook_output_filename(flight):
+        _, filename = os.path.split(flight.filename)
+        return filename
+
     default_logbook_output_fields = [
-        ('Datetime (UTC)', 'flight', 'takeoff_datetime'),
-        ('Distance', 'flight', 'dist_total'),
-        ('Total Climb', 'flight', 'climb_total_abs'),
+        ('Datetime (UTC)', logbook_output_datetime),
+        ('Distance (km)', logbook_output_distance),
+        ('Total Climb (m)', logbook_output_totalclimb),
+        ('Flight Time (min)', logbook_output_flighttime),
+        ('Track File', logbook_output_filename),
         # ('Max Altitude', 'flight', 'alt_peak'),
         # ('Min Altitude', 'flight', 'alt_floor'),
         ]
@@ -85,11 +104,10 @@ def main():
         output.write(header[:-1] + '\n')
 
         for flight in logbook['flights']:
-            recordline = ''
+            recordlines = []
             for field in outputfields:
-                if field[1] == 'flight':
-                    recordline += str(flight.flightinfo[field[2]]) + ','
-            output.write(recordline[:-1] + '\n')
+                recordlines.append(str(field[1](flight)))
+            output.write(','.join(recordlines) + '\n')
 
     # Output the CSV file for all flights
     for flight in logbook['flights']:
