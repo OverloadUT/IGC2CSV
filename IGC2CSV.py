@@ -7,10 +7,13 @@ import datetime
 def crunch_logbook(logbook):
     logbook['flight_time'] = 0
     for flight in logbook['flights']:
-        # TODO This is a HACK for the 6030 having 5 minutes of lead time before the flight
+        # TODO This is a HACK for the 6030 having 5 minutes of lead time
+        # before the flight
         print logbook['flight_time']
         logbook['flight_time'] += flight.flightinfo['time_total'] - 300
-        print "Total flight time: {:.2f} hours".format(logbook['flight_time']/60./60.)
+        print "Total flight time: {:.2f} hours".format(
+            logbook['flight_time']/60./60.
+        )
 
 
 def get_output_filename(flight):

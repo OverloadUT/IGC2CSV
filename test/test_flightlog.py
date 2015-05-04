@@ -58,10 +58,13 @@ def test_abs_distance():
 
 
 def test_todo_true_airspeed(self):
-    raise NotImplementedError("Need to handle computations for true airspeed (tas_peak)")
+    raise NotImplementedError(
+        "Need to handle computations for true airspeed (tas_peak)")
+
 
 def test_todo_alt_peak_and_floor(self):
-    raise NotImplementedError("Need to compute max and min altitude, and alt range for the flight")
+    raise NotImplementedError(
+        "Need to compute max and min altitude, and alt range for the flight")
 
 
 class TestFixRecord():
@@ -139,8 +142,8 @@ class TestFlight():
         flight._parseline("B1049155210978N00006639WA0011400065")
         assert len(flight.fixrecords) == 1
         testrecord = flight.fixrecords[0]
-        assert (testrecord['datetime']
-                == datetime.datetime(2009, 1, 1, 10, 49, 15))
+        assert (testrecord['datetime'] ==
+                datetime.datetime(2009, 1, 1, 10, 49, 15))
         assert testrecord['latitude'] == 52 + 10.978/60
         assert testrecord['longitude'] == (0 + 6.639/60) * -1
         assert testrecord['avflag'] is True
@@ -157,16 +160,16 @@ class TestFlight():
         flight._parseline("B0946085230417N00053009EV0084200805")
         assert len(flight.fixrecords) == 2
         testrecord = flight.fixrecords[0]
-        assert (testrecord['datetime']
-                == datetime.datetime(2009, 1, 1, 22, 42, 17))
+        assert (testrecord['datetime'] ==
+                datetime.datetime(2009, 1, 1, 22, 42, 17))
         assert testrecord['latitude'] == 52 + 10.978/60
         assert testrecord['longitude'] == (0 + 6.639/60) * -1
         assert testrecord['avflag'] is True
         assert testrecord['pressure'] == 114
         assert testrecord['alt_gps'] == 65
         testrecord = flight.fixrecords[1]
-        assert (testrecord['datetime']
-                == datetime.datetime(2009, 1, 2, 9, 46, 8))
+        assert (testrecord['datetime'] ==
+                datetime.datetime(2009, 1, 2, 9, 46, 8))
         assert testrecord['latitude'] == 52 + 30.417/60
         assert testrecord['longitude'] == (0 + 53.009/60)
         assert testrecord['avflag'] is False
